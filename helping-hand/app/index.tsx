@@ -1,15 +1,14 @@
 import { Text, View } from "react-native";
-
+import HelpingHandHomeScreen from "./components/mainpage_user";
+import {Stack} from "expo-router";
 export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+
+  return <>
+ <Stack.Screen
+     options={{
+        headerShown: false
       }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-    </View>
-  );
+    />
+    <HelpingHandHomeScreen />;
+    </>
 }
