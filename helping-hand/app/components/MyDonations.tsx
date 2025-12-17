@@ -12,21 +12,13 @@ import {
     Text,
     View,
 } from "react-native";
+import { getDonations, DonationRecord as StoreDonationRecord, subscribe } from "../store/donationStore";
 import styles from "../styles/MyDonationStyle";
 import BottomNav, { NavItem } from "./Navbar";
 
 /* ================= TYPES ================= */
 
-export interface DonationRecord {
-  id: string;
-  type: "clothes" | "food" | "blood" | "financial";
-  title: string;
-  recipientName: string;
-  amount?: string;
-  date: string;
-  location: string;
-  status: "completed" | "pending" | "in-progress";
-}
+export type DonationRecord = StoreDonationRecord;
 
 type TabType = "all" | "completed" | "pending";
 
@@ -45,80 +37,7 @@ const statusConfig = {
   "in-progress": { label: "In Progress", color: "#2563eb", icon: TrendingUp },
 };
 
-/* ================= MOCK DATA ================= */
-
-const myDonationHistory: DonationRecord[] = [
-  {
-    id: "1",
-    type: "blood",
-    title: "Blood Donation - O+",
-    recipientName: "City Hospital",
-    amount: "1 unit",
-    date: "Dec 10, 2024",
-    location: "City Hospital, Downtown",
-    status: "completed",
-  },
-  {
-    id: "2",
-    type: "financial",
-    title: "Medical Fund Contribution",
-    recipientName: "Sarah's Cancer Treatment",
-    amount: "$250",
-    date: "Dec 8, 2024",
-    location: "Memorial Hospital",
-    status: "completed",
-  },
-  {
-    id: "3",
-    type: "clothes",
-    title: "Winter Clothes Donation",
-    recipientName: "Kids Care NGO",
-    amount: "5 items",
-    date: "Dec 5, 2024",
-    location: "Community Center, North",
-    status: "completed",
-  },
-  {
-    id: "4",
-    type: "food",
-    title: "Food Package",
-    recipientName: "Hope Shelter",
-    amount: "10 kg",
-    date: "Dec 3, 2024",
-    location: "Hope Shelter, East Side",
-    status: "completed",
-  },
-  {
-    id: "5",
-    type: "financial",
-    title: "Education Fund",
-    recipientName: "Bright Future Orphanage",
-    amount: "$100",
-    date: "Dec 1, 2024",
-    location: "Bright Future Orphanage",
-    status: "completed",
-  },
-  {
-    id: "6",
-    type: "food",
-    title: "Meal Delivery",
-    recipientName: "Sunshine Care Home",
-    amount: "20 meals",
-    date: "Nov 28, 2024",
-    location: "Sunshine Care Home",
-    status: "in-progress",
-  },
-  {
-    id: "7",
-    type: "clothes",
-    title: "Professional Attire",
-    recipientName: "Employment Aid",
-    amount: "3 suits",
-    date: "Nov 25, 2024",
-    location: "Career Center, West",
-    status: "pending",
-  },
-];
+/* data comes from shared store */
 
 
 function Badge({ label, color }: { label: string; color: string }) {
@@ -177,18 +96,23 @@ function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
 export default function MyDonations() {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [navActive, setNavActive] = useState<NavItem>("donations");
+  const [myDonationHistory, setMyDonationHistory] = useState<DonationRecord[]>(() => getDonations());
 
-  const completed = myDonationHistory.filter(d => d.status === "completed");
+  // subscribe to store updates
+  useState(() => {
+    const unsub = subscribe((items) => {
+      setMyDonationHistory(items);
+    });
+    return unsub;
+  });
+
+  const completed = myDonationHistory.filter((d) => d.status === "completed");
   const pending = myDonationHistory.filter(
-    d => d.status === "pending" || d.status === "in-progress"
+    (d) => d.status === "pending" || d.status === "in-progress"
   );
 
   const data =
-    activeTab === "completed"
-      ? completed
-      : activeTab === "pending"
-      ? pending
-      : myDonationHistory;
+    activeTab === "completed" ? completed : activeTab === "pending" ? pending : myDonationHistory;
 
   return (
     <View style={styles.container}>

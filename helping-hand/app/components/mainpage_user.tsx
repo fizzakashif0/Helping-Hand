@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -8,6 +9,7 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import { addDonation } from "../store/donationStore";
 import styles from "../styles/MainStyle";
 import type { DonationType } from "./DonationPost";
 import { FilterSheet } from "./FilterSheet";
@@ -34,6 +36,7 @@ const DonationCard = ({
   likes,
   comments
 }: DonationCardProps) => {
+  const router = useRouter();
   const categoryStyles: { [key: string]: any } = {
     blood: styles.blood,
     food: styles.food,
@@ -65,18 +68,21 @@ const DonationCard = ({
 
       <View style={styles.actionRow}>
         <View style={styles.stats}>
-          <TouchableOpacity onPress={() => Alert.alert("Liked!", `${likes} people liked this`)}>
-            <Ionicons name="heart-outline" size={16} />
-          </TouchableOpacity>
-          <Text style={styles.statText}>{likes}</Text>
-
-          <TouchableOpacity onPress={() => Alert.alert("Comments", `${comments} comments`)}>
-            <Ionicons name="chatbubble-outline" size={16} />
-          </TouchableOpacity>
-          <Text style={styles.statText}>{comments}</Text>
-
-          <TouchableOpacity onPress={() => Alert.alert("Shared!", "Post shared successfully")}>
-            <Ionicons name="share-social-outline" size={16} />
+          <TouchableOpacity
+            onPress={() => {
+              addDonation({
+                type: category as any,
+                title,
+                recipientName: "Saved from feed",
+                amount: undefined,
+                date: new Date().toLocaleDateString(),
+                location,
+                status: "pending",
+              });
+              router.push("/donations");
+            }}
+          >
+            <Ionicons name="bookmark-outline" />
           </TouchableOpacity>
         </View>
 
@@ -105,6 +111,127 @@ export default function HelpingHandHomeScreen() {
   const handleClearAll = () => {
     setSelectedTypes([]);
   };
+
+  const feedData: Array<{
+    id: string;
+    category: DonationType;
+    urgent?: boolean;
+    title: string;
+    description: string;
+    location: string;
+    time: string;
+    likes: number;
+    comments: number;
+  }> = [
+    {
+      id: "f1",
+      category: "food",
+      urgent: false,
+      title: "Biryani Available for Distribution",
+      description:
+        "Freshly cooked chicken biryani is available for 10 people. Can be picked up within the next 2 hours.",
+      location: "Gulshan-e-Iqbal, Karachi",
+      time: "5 min ago",
+      likes: 12,
+      comments: 3,
+    },
+    {
+      id: "f2",
+      category: "food",
+      urgent: false,
+      title: "5 Person Meal Available",
+      description:
+        "Home-cooked meal available for 5 people including rice, curry, and bread. Prefer same-day pickup.",
+      location: "Model Town, Lahore",
+      time: "20 min ago",
+      likes: 20,
+      comments: 6,
+    },
+    {
+      id: "f3",
+      category: "financial",
+      urgent: true,
+      title: "Emergency Financial Help Needed",
+      description:
+        "Daily wage worker needs urgent financial assistance for rent and utilities after job loss.",
+      location: "Korangi, Karachi",
+      time: "1 hour ago",
+      likes: 45,
+      comments: 18,
+    },
+    {
+      id: "f4",
+      category: "blood",
+      urgent: true,
+      title: "Urgent Blood Required (B+)",
+      description:
+        "Patient undergoing surgery needs B+ blood within 24 hours. Any help would be lifesaving.",
+      location: "Jinnah Hospital, Lahore",
+      time: "30 min ago",
+      likes: 60,
+      comments: 25,
+    },
+    {
+      id: "f5",
+      category: "clothes",
+      urgent: false,
+      title: "Winter Clothes for Children",
+      description:
+        "Gently used winter clothes available for children aged 5 to 10. Clean and in good condition.",
+      location: "Gulshan-e-Iqbal, Karachi",
+      time: "2 hours ago",
+      likes: 32,
+      comments: 9,
+    },
+    {
+      id: "f6",
+      category: "financial",
+      urgent: false,
+      title: "School Fee Assistance",
+      description: "Single mother seeking short-term financial help to pay school fees for two children.",
+      location: "Rawalpindi",
+      time: "3 hours ago",
+      likes: 28,
+      comments: 11,
+    },
+    {
+      id: "f7",
+      category: "blood",
+      urgent: false,
+      title: "Regular Blood Donors Needed",
+      description: "Hospital requesting voluntary blood donors for upcoming medical procedures.",
+      location: "Civil Hospital, Hyderabad",
+      time: "5 hours ago",
+      likes: 22,
+      comments: 7,
+    },
+    {
+      id: "f8",
+      category: "clothes",
+      urgent: false,
+      title: "Winter Clothes Available for Children",
+      description: "Gently used winter jackets, sweaters, and shoes available for children aged 5 to 10.",
+      location: "F-10, Islamabad",
+      time: "1 hour ago",
+      likes: 35,
+      comments: 8,
+    },
+    {
+      id: "f9",
+      category: "financial",
+      urgent: false,
+      title: "Monthly Grocery Support Available",
+      description: "Willing to sponsor monthly groceries for a family in need. NGOs or verified individuals preferred.",
+      location: "Saddar, Rawalpindi",
+      time: "2 hours ago",
+      likes: 28,
+      comments: 7,
+    },
+  ];
+
+  const visibleFeed = feedData.filter((item) =>
+    selectedTypes.length > 0 ? selectedTypes.includes(item.category) : true
+  );
 
   return (
     <View style={styles.container}>
@@ -135,121 +262,23 @@ export default function HelpingHandHomeScreen() {
 </View>
 
 
-     {/* Feed: Available Donations */}
-<ScrollView showsVerticalScrollIndicator={false}>
 
-  <DonationCard
-    category="food"
-    urgent={false}
-    title="Biryani Available for Distribution"
-    description="Freshly cooked chicken biryani is available for 10 people. Can be picked up within the next 2 hours."
-    location="Gulshan-e-Iqbal, Karachi"
-    time="5 min ago"
-    likes={12}
-    comments={3}
-  />
-
-  <DonationCard
-    category="food"
-    urgent={false}
-    title="5 Person Meal Available"
-    description="Home-cooked meal available for 5 people including rice, curry, and bread. Prefer same-day pickup."
-    location="Model Town, Lahore"
-    time="20 min ago"
-    likes={20}
-    comments={6}
-  />
-  <DonationCard
-  category="food"
-  urgent={false}
-  title="5 Person Meal Available"
-  description="Home-cooked meal available for 5 people including rice, curry, and bread. Prefer same-day pickup."
-  location="Model Town, Lahore"
-  time="20 min ago"
-  likes={20}
-  comments={6}
-/>
-
-<DonationCard
-  category="financial"
-  urgent={true}
-  title="Emergency Financial Help Needed"
-  description="Daily wage worker needs urgent financial assistance for rent and utilities after job loss."
-  location="Korangi, Karachi"
-  time="1 hour ago"
-  likes={45}
-  comments={18}
-/>
-
-<DonationCard
-  category="blood"
-  urgent={true}
-  title="Urgent Blood Required (B+)"
-  description="Patient undergoing surgery needs B+ blood within 24 hours. Any help would be lifesaving."
-  location="Jinnah Hospital, Lahore"
-  time="30 min ago"
-  likes={60}
-  comments={25}
-/>
-
-<DonationCard
-  category="clothes"
-  urgent={false}
-  title="Winter Clothes for Children"
-  description="Gently used winter clothes available for children aged 5 to 10. Clean and in good condition."
-  location="Gulshan-e-Iqbal, Karachi"
-  time="2 hours ago"
-  likes={32}
-  comments={9}
-/>
-
-<DonationCard
-  category="financial"
-  urgent={false}
-  title="School Fee Assistance"
-  description="Single mother seeking short-term financial help to pay school fees for two children."
-  location="Rawalpindi"
-  time="3 hours ago"
-  likes={28}
-  comments={11}
-/>
-
-<DonationCard
-  category="blood"
-  urgent={false}
-  title="Regular Blood Donors Needed"
-  description="Hospital requesting voluntary blood donors for upcoming medical procedures."
-  location="Civil Hospital, Hyderabad"
-  time="5 hours ago"
-  likes={22}
-  comments={7}
-/>
-
-
-  <DonationCard
-    category="clothes"
-    urgent={false}
-    title="Winter Clothes Available for Children"
-    description="Gently used winter jackets, sweaters, and shoes available for children aged 5 to 10."
-    location="F-10, Islamabad"
-    time="1 hour ago"
-    likes={35}
-    comments={8}
-  />
-
-  <DonationCard
-    category="financial"
-    urgent={false}
-    title="Monthly Grocery Support Available"
-    description="Willing to sponsor monthly groceries for a family in need. NGOs or verified individuals preferred."
-    location="Saddar, Rawalpindi"
-    time="2 hours ago"
-    likes={28}
-    comments={7}
-  />
-
-
-</ScrollView>
+      {/* Feed: Available Donations */}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {visibleFeed.map((item) => (
+          <DonationCard
+            key={item.id}
+            category={item.category}
+            urgent={item.urgent}
+            title={item.title}
+            description={item.description}
+            location={item.location}
+            time={item.time}
+            likes={item.likes}
+            comments={item.comments}
+          />
+        ))}
+      </ScrollView>
 
 <BottomNav
   activeTab={activeTab}
