@@ -1,5 +1,5 @@
-import React from "react";
 import clsx from "clsx";
+import React from "react";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -18,3 +18,5 @@ export function Badge({ children, className }: BadgeProps) {
     </span>
   );
 }
+
+export default Badge;

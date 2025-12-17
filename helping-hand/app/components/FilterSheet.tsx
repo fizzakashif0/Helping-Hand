@@ -156,3 +156,5 @@ export function FilterSheet({
     </Modal>
   );
 }
+
+export default FilterSheet;

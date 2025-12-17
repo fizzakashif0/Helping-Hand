@@ -1,13 +1,24 @@
 import { Stack } from "expo-router";
+import { useState } from "react";
 import HelpingHandHomeScreen from "./components/mainpage_user";
-export default function Index() {
+import OpeningScreen from "./components/OpeningScreen";
 
-  return <>
- <Stack.Screen
-     options={{
-        headerShown: false
-      }}
-    />
-    <HelpingHandHomeScreen />
+export default function Index() {
+  const [started, setStarted] = useState(false);
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      {started ? (
+        <HelpingHandHomeScreen />
+      ) : (
+        <OpeningScreen onStart={() => setStarted(true)} />
+      )}
     </>
+  );
 }
