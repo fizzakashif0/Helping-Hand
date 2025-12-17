@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
   ScrollView,
+  Text,
   TouchableOpacity,
-  Alert
+  View
 } from "react-native";
-import styles from "../styles/MainStyle";
+
 import { Ionicons } from "@expo/vector-icons";
-import { FilterSheet } from "./FilterSheet";
+import styles from "../styles/MainStyle";
 import type { DonationType } from "./DonationPost";
+import { FilterSheet } from "./FilterSheet";
+import BottomNav, { NavItem } from "./Navbar";
 
 interface DonationCardProps {
   category: string;
@@ -37,7 +38,7 @@ const DonationCard = ({
     blood: styles.blood,
     food: styles.food,
     financial: styles.financial,
-    urgent: styles.urgent,
+    clothes: styles.clothes,
   };
 
   return (
@@ -47,11 +48,11 @@ const DonationCard = ({
           <Text style={styles.tagText}>{category}</Text>
         </View>
 
-        {urgent && (
-          <View style={[styles.tag, styles.urgent]}>
+        
+          <View >
             <Text style={styles.tagText}>Urgent</Text>
           </View>
-        )}
+        
       </View>
 
       <Text style={styles.cardTitle}>{title}</Text>
@@ -90,6 +91,8 @@ const DonationCard = ({
 export default function HelpingHandHomeScreen() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<DonationType[]>([]);
+
+  const [activeTab, setActiveTab] = useState<NavItem>("home");
 
   const handleTypeToggle = (type: DonationType) => {
     setSelectedTypes((prev) =>
@@ -156,6 +159,72 @@ export default function HelpingHandHomeScreen() {
     likes={20}
     comments={6}
   />
+  <DonationCard
+  category="food"
+  urgent={false}
+  title="5 Person Meal Available"
+  description="Home-cooked meal available for 5 people including rice, curry, and bread. Prefer same-day pickup."
+  location="Model Town, Lahore"
+  time="20 min ago"
+  likes={20}
+  comments={6}
+/>
+
+<DonationCard
+  category="financial"
+  urgent={true}
+  title="Emergency Financial Help Needed"
+  description="Daily wage worker needs urgent financial assistance for rent and utilities after job loss."
+  location="Korangi, Karachi"
+  time="1 hour ago"
+  likes={45}
+  comments={18}
+/>
+
+<DonationCard
+  category="blood"
+  urgent={true}
+  title="Urgent Blood Required (B+)"
+  description="Patient undergoing surgery needs B+ blood within 24 hours. Any help would be lifesaving."
+  location="Jinnah Hospital, Lahore"
+  time="30 min ago"
+  likes={60}
+  comments={25}
+/>
+
+<DonationCard
+  category="clothes"
+  urgent={false}
+  title="Winter Clothes for Children"
+  description="Gently used winter clothes available for children aged 5 to 10. Clean and in good condition."
+  location="Gulshan-e-Iqbal, Karachi"
+  time="2 hours ago"
+  likes={32}
+  comments={9}
+/>
+
+<DonationCard
+  category="financial"
+  urgent={false}
+  title="School Fee Assistance"
+  description="Single mother seeking short-term financial help to pay school fees for two children."
+  location="Rawalpindi"
+  time="3 hours ago"
+  likes={28}
+  comments={11}
+/>
+
+<DonationCard
+  category="blood"
+  urgent={false}
+  title="Regular Blood Donors Needed"
+  description="Hospital requesting voluntary blood donors for upcoming medical procedures."
+  location="Civil Hospital, Hyderabad"
+  time="5 hours ago"
+  likes={22}
+  comments={7}
+/>
+
 
   <DonationCard
     category="clothes"
@@ -179,16 +248,13 @@ export default function HelpingHandHomeScreen() {
     comments={7}
   />
 
+
 </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <Ionicons name="home-outline" size={24} />
-        <Ionicons name="heart-outline" size={24} />
-        <Ionicons name="add-circle-outline" size={30} />
-        <Ionicons name="notifications-outline" size={24} />
-        <Ionicons name="person-outline" size={24} color="red" />
-      </View>
+<BottomNav
+  activeTab={activeTab}
+  onTabChange={setActiveTab}
+/>
     </View>
   );
 }

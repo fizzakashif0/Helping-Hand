@@ -75,6 +75,7 @@ headerRow: {
   food: { backgroundColor: "#2e7d32" },
   financial: { backgroundColor: "#f9a825" },
   urgent: { backgroundColor: "#c62828" },
+  clothes: { backgroundColor: "#1565c0"},
 
   cardTitle: {
     fontSize: 18,

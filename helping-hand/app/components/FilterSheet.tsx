@@ -1,6 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Modal } from "react-native";
 import { X } from "lucide-react-native";
+import { Modal, Text, TouchableOpacity, View } from "react-native";
 import { DonationType } from "./DonationPost";
 
 interface FilterSheetProps {
@@ -70,7 +69,7 @@ export function FilterSheet({
               Donation Type
             </Text>
 
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
               {donationTypes.map(({ type, label, color }) => {
                 const isSelected = selectedTypes.includes(type);
 
@@ -83,7 +82,8 @@ export function FilterSheet({
                       minWidth: "45%",
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 12,
+                      marginRight: 12,
+                      marginBottom: 12,
                       padding: 12,
                       borderRadius: 8,
                       borderWidth: 1,
@@ -104,7 +104,8 @@ export function FilterSheet({
                       style={{
                         fontSize: 14,
                         fontWeight: "500",
-                        color: "#1f2937"
+                        color: "#1f2937",
+                        marginLeft: 12
                       }}
                     >
                       {label}
@@ -116,7 +117,7 @@ export function FilterSheet({
           </View>
 
           {/* Actions */}
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flexDirection: "row" }}>
             <TouchableOpacity
               onPress={onClearAll}
               disabled={selectedTypes.length === 0}
@@ -127,7 +128,8 @@ export function FilterSheet({
                 borderWidth: 1,
                 borderColor: "#e5e7eb",
                 backgroundColor: "#f9fafb",
-                opacity: selectedTypes.length === 0 ? 0.5 : 1
+                opacity: selectedTypes.length === 0 ? 0.5 : 1,
+                marginRight: 12
               }}
             >
               <Text style={{ textAlign: "center", fontSize: 14, fontWeight: "600", color: "#1f2937" }}>

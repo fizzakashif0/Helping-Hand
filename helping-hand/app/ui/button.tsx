@@ -1,12 +1,12 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native";
+import { StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
 
 interface ButtonProps {
   children: React.ReactNode;
   variant?: "default" | "outline";
   onPress?: () => void;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 const styles = StyleSheet.create({

@@ -1,6 +1,5 @@
-import { Text, View } from "react-native";
+import { Stack } from "expo-router";
 import HelpingHandHomeScreen from "./components/mainpage_user";
-import {Stack} from "expo-router";
 export default function Index() {
 
   return <>
@@ -9,6 +8,6 @@ export default function Index() {
         headerShown: false
       }}
     />
-    <HelpingHandHomeScreen />;
+    <HelpingHandHomeScreen />
     </>
 }
