@@ -25,8 +25,8 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const navItems: Array<{ id: NavItem; icon: any; label: string; route?: string }> = [
     { id: "home", icon: Home, label: "Home", route: "/" },
     { id: "donations", icon: Heart, label: "My Donations", route: "/donations" },
-    { id: "create", icon: PlusCircle, label: "Create" },
-    { id: "notifications", icon: Bell, label: "Messages" },
+    { id: "create", icon: PlusCircle, label: "Create", route: "/create" },
+    { id: "notifications", icon: Bell, label: "Messages", route: "/post" },
     { id: "profile", icon: User, label: "Profile" },
   ];
 
@@ -46,7 +46,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             activeOpacity={0.7}
           >
             <Icon size={22} color={isActive ? "#dc2626" : "#6b7280"} />
-            <Text style={[styles.label, { color: isActive ? "#dc2626" : "#6b7280" }]}>
+            <Text style={[styles.label, { color: isActive ? "#dc2626" : "#6b7280" }]}> 
               {label}
             </Text>
           </TouchableOpacity>

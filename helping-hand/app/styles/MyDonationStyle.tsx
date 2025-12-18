@@ -3,7 +3,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
 
   header: {
-    backgroundColor: "#dc2626",
+    backgroundColor: '#1A5F7A',
     padding: 20,
   },
   headerTitle: {
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#ef4444",
+    backgroundColor:'#2a7795ff',
     borderRadius: 12,
     padding: 16,
   },
@@ -43,15 +43,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   activeTab: {
-    color: "#dc2626",
+    color: '#1A5F7A',
     borderBottomWidth: 2,
-    borderBottomColor: "#dc2626",
+    borderBottomColor: '#1A5F7A',
   },
 
   list: { padding: 16 },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: '#d7dadbff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

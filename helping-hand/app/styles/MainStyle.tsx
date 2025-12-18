@@ -3,11 +3,11 @@ import { StyleSheet } from "react-native";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e60000",
+    backgroundColor: '#1A5F7A',
   },
 
   header: {
-    backgroundColor:"#e60000" ,
+    backgroundColor:'#1A5F7A' ,
     padding: 20
   },
 
@@ -74,7 +74,6 @@ headerRow: {
   blood: { backgroundColor: "#d32f2f" },
   food: { backgroundColor: "#2e7d32" },
   financial: { backgroundColor: "#f9a825" },
-  urgent: { backgroundColor: "#c62828" },
   clothes: { backgroundColor: "#1565c0"},
 
   cardTitle: {

@@ -25,7 +25,7 @@ let donations: DonationRecord[] = [
     type: "financial",
     title: "Medical Fund Contribution",
     recipientName: "Sarah's Cancer Treatment",
-    amount: "$250",
+    amount: "2500 pkr",
     date: "Dec 8, 2024",
     location: "Memorial Hospital",
     status: "completed",

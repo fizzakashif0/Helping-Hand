@@ -1,15 +1,15 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Animated,
-    Dimensions,
-    Easing,
-    Image,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 type Props = {
