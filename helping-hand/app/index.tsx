@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { useState } from "react";
-import HelpingHandHomeScreen from "./components/mainpage_user";
+import HelpingHandHomeScreen from "./components/Donor/mainpage_user";
 import OpeningScreen from "./components/OpeningScreen";
 
 export default function Index() {

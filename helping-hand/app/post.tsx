@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
-import DonationPost, { DonationPostData, DonationType } from "./components/DonationPost";
+import DonationPost, { DonationPostData, DonationType } from "./components/Donor/DonationPost";
 import BottomNav, { NavItem } from "./components/Navbar";
 
 export default function PostPage() {

@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { View } from "react-native";
-import { CreatePost } from "./components/CreatePost";
+import CreatePost from "./components/CreatePost";
 
 export default function CreateDonation() {
   return (

@@ -12,9 +12,9 @@ import {
     Text,
     View,
 } from "react-native";
-import { getDonations, DonationRecord as StoreDonationRecord, subscribe } from "../store/donationStore";
-import styles from "../styles/MyDonationStyle";
-import BottomNav, { NavItem } from "./Navbar";
+import { getDonations, DonationRecord as StoreDonationRecord, subscribe } from "../../store/donationStore";
+import styles from "../../styles/MyDonationStyle";
+import BottomNav, { NavItem } from "../Navbar";
 
 /* ================= TYPES ================= */
 

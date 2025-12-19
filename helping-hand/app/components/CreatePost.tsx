@@ -9,8 +9,8 @@ import BottomNav, { NavItem } from "./Navbar";
 
 export function CreatePost() {
 	const router = useRouter();
-	const [activeTab, setActiveTab] = useState<NavItem>("create");
 	const [type, setType] = useState<"food" | "clothes" | "blood" | "financial">("food");
+	const [activeTab, setActiveTab] = useState<NavItem>("create");
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [urgency, setUrgency] = useState<"low" | "medium" | "high">("low");
@@ -108,14 +108,14 @@ export function CreatePost() {
 						onPress={() => setUrgency("medium")}
 					>
 						<Text style={[styles.urgencyTitle, urgency === "medium" && styles.urgencyTitleActive]}>Medium</Text>
-						<Text style={styles.urgencyDesc}>Needed within a week</Text>
+						<Text style={styles.urgencyDesc}> within a week</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
 						style={[styles.urgencyBtn, urgency === "high" && styles.urgencyActive]}
 						onPress={() => setUrgency("high")}
 					>
 						<Text style={[styles.urgencyTitle, urgency === "high" && styles.urgencyTitleActive]}>Urgent</Text>
-						<Text style={styles.urgencyDesc}>Needed immediately</Text>
+						<Text style={styles.urgencyDesc}>Available immediately</Text>
 					</TouchableOpacity>
 				</View>
 
@@ -204,3 +204,5 @@ const styles = StyleSheet.create({
 	iconInputRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#e5e7eb" },
 	iconInput: { flex: 1 },
 });
+
+export default CreatePost;
