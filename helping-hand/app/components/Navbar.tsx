@@ -23,10 +23,10 @@ interface BottomNavProps {
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const router = useRouter();
   const navItems: Array<{ id: NavItem; icon: any; label: string; route?: string }> = [
-    { id: "home", icon: Home, label: "Home", route: "/" },
+    { id: "home", icon: Home, label: "Home", route: "/home" },
     { id: "donations", icon: Heart, label: "My Donations", route: "/donations" },
     { id: "create", icon: PlusCircle, label: "Create", route: "/create" },
-    { id: "notifications", icon: Bell, label: "Messages", route: "/post" },
+    { id: "notifications", icon: Bell, label: "Messages", route: "/chat" },
     { id: "profile", icon: User, label: "Profile" },
   ];
 

@@ -2,9 +2,22 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import HelpingHandHomeScreen from "./components/Donor/mainpage_user";
 import OpeningScreen from "./components/OpeningScreen";
+import { RoleSelection } from "./components/RoleSelectionScreen";
+
+type AppStage = "opening" | "roleSelection" | "home";
 
 export default function Index() {
-  const [started, setStarted] = useState(false);
+  const [stage, setStage] = useState<AppStage>("opening");
+  const [userRole, setUserRole] = useState<"donor" | "recipient" | "ngo" | null>(null);
+
+  const handleGetStarted = () => {
+    setStage("roleSelection");
+  };
+
+  const handleRoleSelect = (role: "donor" | "recipient" | "ngo") => {
+    setUserRole(role);
+    setStage("home");
+  };
 
   return (
     <>
@@ -14,10 +27,14 @@ export default function Index() {
         }}
       />
 
-      {started ? (
+      {stage === "opening" && (
+        <OpeningScreen onStart={handleGetStarted} />
+      )}
+      {stage === "roleSelection" && (
+        <RoleSelection onRoleSelect={handleRoleSelect} />
+      )}
+      {stage === "home" && (
         <HelpingHandHomeScreen />
-      ) : (
-        <OpeningScreen onStart={() => setStarted(true)} />
       )}
     </>
   );

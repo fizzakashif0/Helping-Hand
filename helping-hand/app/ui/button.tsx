@@ -82,3 +82,5 @@ icon: { width: 40, height: 40 },
 
 disabled: { opacity: 0.5 },
 });
+
+export default Button;

@@ -150,7 +150,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
       {/* Nearby Requests */}
       <SectionHeader
         title="Nearby Requests"
-        onPress={() => onNavigate("donation-feed")}
+        onPress={() => router.push("/donation-feed")}
       />
 
       {mockNearbyRequests.map((request) => (

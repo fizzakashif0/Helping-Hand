@@ -1,73 +1,69 @@
 import {
-    Calendar,
-    CheckCircle,
-    Clock,
-    MapPin,
-    TrendingUp,
+  Calendar,
+  CheckCircle,
+  Clock,
+  MapPin,
+  TrendingUp
 } from "lucide-react-native";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import {
-    ScrollView,
-    Text,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
-import { getDonations, DonationRecord as StoreDonationRecord, subscribe } from "../../store/donationStore";
-import styles from "../../styles/MyDonationStyle";
+
+import { DonationRecord, getDonations, subscribe } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
-/* ================= TYPES ================= */
-
-export type DonationRecord = StoreDonationRecord;
-
-type TabType = "all" | "completed" | "pending";
-
-/* ================= CONFIG ================= */
-
 const typeConfig = {
-  clothes: { label: "Clothes", color: "#3b82f6" },
-  food: { label: "Food", color: "#22c55e" },
-  blood: { label: "Blood", color: "#b91c1c" },
-  financial: { label: "Financial", color: "#f59e0b" },
+  clothes: { label: "Clothes", color: "#3B82F6" },
+  food: { label: "Food", color: "#22C55E" },
+  blood: { label: "Blood", color: "#B91C1C" },
+  financial: { label: "Financial", color: "#F59E0B" }
 };
 
 const statusConfig = {
-  completed: { label: "Completed", color: "#16a34a", icon: CheckCircle },
-  pending: { label: "Pending", color: "#eab308", icon: Clock },
-  "in-progress": { label: "In Progress", color: "#2563eb", icon: TrendingUp },
+  completed: { label: "Completed", color: "#16A34A", icon: CheckCircle },
+  pending: { label: "Pending", color: "#FACC15", icon: Clock },
+  "in-progress": { label: "In Progress", color: "#2563EB", icon: TrendingUp }
 };
-
-/* data comes from shared store */
-
-
-function Badge({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: color }]}>
-      <Text style={styles.badgeText}>{label}</Text>
-    </View>
-  );
-}
 
 function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
   const StatusIcon = statusConfig[donation.status].icon;
 
   return (
     <View style={styles.card}>
-      <View style={styles.rowBetween}>
+      <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
           <View style={styles.badgeRow}>
-            <Badge
-              label={typeConfig[donation.type].label}
-              color={typeConfig[donation.type].color}
-            />
-            <Badge
-              label={statusConfig[donation.status].label}
-              color={statusConfig[donation.status].color}
-            />
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: typeConfig[donation.type].color }
+              ]}
+            >
+              <Text style={styles.badgeText}>
+                {typeConfig[donation.type].label}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: statusConfig[donation.status].color }
+              ]}
+            >
+              <StatusIcon size={12} color="#fff" />
+              <Text style={styles.badgeText}>
+                {" "}{statusConfig[donation.status].label}
+              </Text>
+            </View>
           </View>
 
-          <Text style={styles.cardTitle}>{donation.title}</Text>
-          <Text style={styles.cardSubtitle}>
+          <Text style={styles.title}>{donation.title}</Text>
+          <Text style={styles.subText}>
             To: {donation.recipientName}
           </Text>
         </View>
@@ -79,11 +75,12 @@ function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
 
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
-          <Calendar size={12} color="#6b7280" />
+          <Calendar size={14} color="#6B7280" />
           <Text style={styles.metaText}>{donation.date}</Text>
         </View>
+
         <View style={styles.metaItem}>
-          <MapPin size={12} color="#6b7280" />
+          <MapPin size={14} color="#6B7280" />
           <Text style={styles.metaText}>{donation.location}</Text>
         </View>
       </View>
@@ -91,28 +88,27 @@ function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
   );
 }
 
-/* ================= MAIN SCREEN ================= */
+export function MyDonations() {
+  const [filterTab, setFilterTab] = useState<"all" | "completed" | "pending">("all");
+  const [navTab, setNavTab] = useState<NavItem>("donations");
+  const [donationHistory, setDonationHistory] = useState<DonationRecord[]>(() => getDonations());
 
-export default function MyDonations() {
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [navActive, setNavActive] = useState<NavItem>("donations");
-  const [myDonationHistory, setMyDonationHistory] = useState<DonationRecord[]>(() => getDonations());
+  useEffect(() => {
+    const unsubscribe = subscribe(setDonationHistory);
+    return unsubscribe;
+  }, []);
 
-  // subscribe to store updates
-  useState(() => {
-    const unsub = subscribe((items) => {
-      setMyDonationHistory(items);
-    });
-    return unsub;
-  });
-
-  const completed = myDonationHistory.filter((d) => d.status === "completed");
-  const pending = myDonationHistory.filter(
-    (d) => d.status === "pending" || d.status === "in-progress"
+  const completed = donationHistory.filter(d => d.status === "completed");
+  const pending = donationHistory.filter(
+    d => d.status === "pending" || d.status === "in-progress"
   );
 
   const data =
-    activeTab === "completed" ? completed : activeTab === "pending" ? pending : myDonationHistory;
+    filterTab === "all"
+      ? donationHistory
+      : filterTab === "completed"
+      ? completed
+      : pending;
 
   return (
     <View style={styles.container}>
@@ -126,11 +122,12 @@ export default function MyDonations() {
 
       {/* Stats */}
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
+        <View style={styles.statBox}>
           <Text style={styles.statLabel}>Total Donations</Text>
-          <Text style={styles.statValue}>{myDonationHistory.length}</Text>
+          <Text style={styles.statValue}>{donationHistory.length}</Text>
         </View>
-        <View style={styles.statCard}>
+
+        <View style={styles.statBox}>
           <Text style={styles.statLabel}>Completed</Text>
           <Text style={styles.statValue}>{completed.length}</Text>
         </View>
@@ -138,35 +135,216 @@ export default function MyDonations() {
 
       {/* Tabs */}
       <View style={styles.tabsRow}>
-        {(["all", "completed", "pending"] as TabType[]).map(tab => (
-          <Text
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={[
-              styles.tab,
-              activeTab === tab && styles.activeTab,
-            ]}
-          >
-            {tab === "all"
-              ? `All (${myDonationHistory.length})`
-              : tab === "completed"
-              ? `Completed (${completed.length})`
-              : `Pending (${pending.length})`}
-          </Text>
-        ))}
+        <TabButton
+          label={`All (${donationHistory.length})`}
+          active={filterTab === "all"}
+          onPress={() => setFilterTab("all")}
+        />
+        <TabButton
+          label={`Completed (${completed.length})`}
+          active={filterTab === "completed"}
+          onPress={() => setFilterTab("completed")}
+        />
+        <TabButton
+          label={`Pending (${pending.length})`}
+          active={filterTab === "pending"}
+          onPress={() => setFilterTab("pending")}
+        />
       </View>
 
       {/* List */}
       <ScrollView contentContainerStyle={styles.list}>
         {data.length > 0 ? (
-          data.map(d => (
-            <DonationHistoryItem key={d.id} donation={d} />
+          data.map(donation => (
+            <DonationHistoryItem
+              key={donation.id}
+              donation={donation}
+            />
           ))
         ) : (
           <Text style={styles.emptyText}>No donations found</Text>
         )}
       </ScrollView>
-      <BottomNav activeTab={navActive} onTabChange={setNavActive} />
+      <BottomNav activeTab={navTab} onTabChange={setNavTab} />
     </View>
   );
 }
+
+function TabButton({
+  label,
+  active,
+  onPress
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.tabButton,
+        active && styles.tabButtonActive
+      ]}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          active && styles.tabTextActive
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB"
+  },
+
+  header: {
+    backgroundColor: "#0E4A61",
+    padding: 20
+  },
+
+  headerTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "600"
+  },
+
+  headerSubtitle: {
+    color: "#FEE2E2",
+    fontSize: 13
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 16
+  },
+
+  statBox: {
+    flex: 1,
+    backgroundColor: "#0E4A61",
+    borderRadius: 12,
+    padding: 14
+  },
+
+  statLabel: {
+    color: "#FEE2E2",
+    fontSize: 12
+  },
+
+  statValue: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "600"
+  },
+
+  tabsRow: {
+    flexDirection: "row",
+    backgroundColor: "#fff"
+  },
+
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center"
+  },
+
+  tabButtonActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#DC2626"
+  },
+
+  tabText: {
+    fontSize: 13,
+    color: "#6B7280"
+  },
+
+  tabTextActive: {
+    color: "#DC2626",
+    fontWeight: "600"
+  },
+
+  list: {
+    padding: 16
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB"
+  },
+
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+
+  badgeRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 6
+  },
+
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16
+  },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: 11
+  },
+
+  title: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827"
+  },
+
+  subText: {
+    fontSize: 13,
+    color: "#6B7280"
+  },
+
+  amount: {
+    color: "#DC2626",
+    fontWeight: "600"
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 8
+  },
+
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
+  },
+
+  metaText: {
+    fontSize: 12,
+    color: "#6B7280"
+  },
+
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    color: "#6B7280"
+  }
+});
+export default MyDonations; 

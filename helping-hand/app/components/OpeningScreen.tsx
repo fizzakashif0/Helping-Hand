@@ -1,12 +1,15 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { HandHeart } from "lucide-react-native";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface OpeningPageProps {
-  onGetStarted: () => void;
+  onStart: () => void;
 }
 
-export default function OpeningPage({ onGetStarted }: OpeningPageProps) {
+export default function OpeningPage({ onStart }: OpeningPageProps) {
+  const router = useRouter();
+
   return (
     <LinearGradient
       colors={["#1A5F7A", "#0E4A61", "#082F3E"]}
@@ -55,18 +58,18 @@ export default function OpeningPage({ onGetStarted }: OpeningPageProps) {
         <View
           style={styles.buttonGroup}
         >
-          <TouchableOpacity style={styles.primaryButton} onPress={onGetStarted}>
+          <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
             <Text style={styles.primaryButtonText}>Get Started</Text>
           </TouchableOpacity>
 
           <View style={styles.authRow}>
-            <TouchableOpacity onPress={onGetStarted}>
+            <TouchableOpacity onPress={() => router.push("/login")}>
               <Text style={styles.authText}>Login</Text>
             </TouchableOpacity>
 
             <Text style={styles.separator}>|</Text>
 
-            <TouchableOpacity onPress={onGetStarted}>
+            <TouchableOpacity onPress={() => router.push("/signup")}>
               <Text style={styles.authText}>Sign Up</Text>
             </TouchableOpacity>
           </View>

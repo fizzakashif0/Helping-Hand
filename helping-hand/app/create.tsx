@@ -1,12 +1,17 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { View } from "react-native";
-import CreatePost from "./components/CreatePost";
+import CreateDonationForm from "./components/Donor/DonationPost";
 
 export default function CreateDonation() {
+  const router = useRouter();
+
   return (
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <CreatePost />
+      <CreateDonationForm 
+        onSubmit={() => router.back()} 
+        onBack={() => router.back()} 
+      />
     </View>
   );
 }

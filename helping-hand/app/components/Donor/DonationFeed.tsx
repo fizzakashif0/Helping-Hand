@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
     ArrowLeft,
     Clock,
@@ -67,6 +68,7 @@ const mockRequests = [
 ];
 
 export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) {
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("all");
 
   const getUrgencyStyle = (urgency: string) => {
@@ -155,9 +157,19 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
             key={request.id}
             style={styles.card}
             activeOpacity={0.85}
-            onPress={() =>
-              onNavigate(`donation-details-${request.id}`)
-            }
+            onPress={() => {
+              router.push({
+                pathname: "/post",
+                params: {
+                  type: request.type.toLowerCase(),
+                  title: request.title,
+                  description: request.description,
+                  location: request.location,
+                  timeAgo: request.timeAgo,
+                  urgency: request.urgency,
+                },
+              });
+            }}
           >
             {/* Badges */}
             <View style={styles.badgeRow}>
