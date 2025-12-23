@@ -27,7 +27,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: "donations", icon: Heart, label: "My Donations", route: "/donations" },
     { id: "create", icon: PlusCircle, label: "Create", route: "/create" },
     { id: "notifications", icon: Bell, label: "Messages", route: "/chat" },
-    { id: "profile", icon: User, label: "Profile" },
+    { id: "profile", icon: User, label: "Profile", route: "/profile" },
   ];
 
   return (
@@ -41,7 +41,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             style={styles.navItem}
             onPress={() => {
               onTabChange(id);
-              if (route) router.push(route);
+              if (route) router.push(route as any);
             }}
             activeOpacity={0.7}
           >
