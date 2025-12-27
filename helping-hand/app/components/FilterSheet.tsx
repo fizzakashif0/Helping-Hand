@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 import { X } from "lucide-react-native";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
+=======
+import React from "react";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { X } from "lucide-react-native";
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
 import { DonationType } from "./DonationPost";
 
 interface FilterSheetProps {
@@ -69,7 +75,11 @@ export function FilterSheet({
               Donation Type
             </Text>
 
+<<<<<<< HEAD
             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+=======
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
               {donationTypes.map(({ type, label, color }) => {
                 const isSelected = selectedTypes.includes(type);
 
@@ -82,8 +92,12 @@ export function FilterSheet({
                       minWidth: "45%",
                       flexDirection: "row",
                       alignItems: "center",
+<<<<<<< HEAD
                       marginRight: 12,
                       marginBottom: 12,
+=======
+                      gap: 12,
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
                       padding: 12,
                       borderRadius: 8,
                       borderWidth: 1,
@@ -104,8 +118,12 @@ export function FilterSheet({
                       style={{
                         fontSize: 14,
                         fontWeight: "500",
+<<<<<<< HEAD
                         color: "#1f2937",
                         marginLeft: 12
+=======
+                        color: "#1f2937"
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
                       }}
                     >
                       {label}
@@ -117,7 +135,11 @@ export function FilterSheet({
           </View>
 
           {/* Actions */}
+<<<<<<< HEAD
           <View style={{ flexDirection: "row" }}>
+=======
+          <View style={{ flexDirection: "row", gap: 12 }}>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
             <TouchableOpacity
               onPress={onClearAll}
               disabled={selectedTypes.length === 0}
@@ -128,8 +150,12 @@ export function FilterSheet({
                 borderWidth: 1,
                 borderColor: "#e5e7eb",
                 backgroundColor: "#f9fafb",
+<<<<<<< HEAD
                 opacity: selectedTypes.length === 0 ? 0.5 : 1,
                 marginRight: 12
+=======
+                opacity: selectedTypes.length === 0 ? 0.5 : 1
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
               }}
             >
               <Text style={{ textAlign: "center", fontSize: 14, fontWeight: "600", color: "#1f2937" }}>
@@ -156,5 +182,8 @@ export function FilterSheet({
     </Modal>
   );
 }
+<<<<<<< HEAD
 
 export default FilterSheet;
+=======
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e

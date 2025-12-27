@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 import { Clock, Heart, MapPin, MessageCircle, Share2 } from "lucide-react-native";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+=======
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Heart, MessageCircle, Share2, MapPin, Clock } from "lucide-react-native";
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
 import { Button } from "../ui/button";
 
 export type DonationType = "clothes" | "food" | "blood" | "financial";
@@ -44,6 +50,10 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: "row",
+<<<<<<< HEAD
+=======
+    gap: 8,
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
     marginBottom: 8
   },
   badge: {
@@ -56,9 +66,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600"
   },
+<<<<<<< HEAD
   badgeMargin: {
     marginRight: 8
   },
+=======
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   title: {
     fontSize: 16,
     fontWeight: "600",
@@ -71,14 +84,23 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: "row",
+<<<<<<< HEAD
+=======
+    gap: 16,
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
     marginBottom: 12
   },
   metaItem: {
     flexDirection: "row",
+<<<<<<< HEAD
     alignItems: "center"
   },
   metaItemMargin: {
     marginRight: 16
+=======
+    alignItems: "center",
+    gap: 4
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   },
   metaText: {
     fontSize: 12,
@@ -93,12 +115,21 @@ const styles = StyleSheet.create({
     borderTopColor: "#f3f4f6"
   },
   statsGroup: {
+<<<<<<< HEAD
     flexDirection: "row"
+=======
+    flexDirection: "row",
+    gap: 20
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   },
   statButton: {
     flexDirection: "row",
     alignItems: "center",
+<<<<<<< HEAD
     marginRight: 20
+=======
+    gap: 4
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   },
   statText: {
     fontSize: 12,
@@ -112,7 +143,11 @@ export function DonationPost({ post }: { post: DonationPostData }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.badgeRow}>
+<<<<<<< HEAD
           <View style={[styles.badge, styles.badgeMargin, { backgroundColor: typeConfig[post.type].color }]}>
+=======
+          <View style={[styles.badge, { backgroundColor: typeConfig[post.type].color }]}>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
             <Text style={styles.badgeText}>{typeConfig[post.type].label}</Text>
           </View>
 
@@ -129,6 +164,7 @@ export function DonationPost({ post }: { post: DonationPostData }) {
 
       {/* Meta */}
       <View style={styles.metaRow}>
+<<<<<<< HEAD
         <View style={[styles.metaItem, styles.metaItemMargin]}>
           <MapPin size={12} color="#6b7280" />
           <Text style={[styles.metaText, { marginLeft: 4 }]}>{post.location}</Text>
@@ -136,6 +172,15 @@ export function DonationPost({ post }: { post: DonationPostData }) {
         <View style={styles.metaItem}>
           <Clock size={12} color="#6b7280" />
           <Text style={[styles.metaText, { marginLeft: 4 }]}>{post.timeAgo}</Text>
+=======
+        <View style={styles.metaItem}>
+          <MapPin size={12} color="#6b7280" />
+          <Text style={styles.metaText}>{post.location}</Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Clock size={12} color="#6b7280" />
+          <Text style={styles.metaText}>{post.timeAgo}</Text>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
         </View>
       </View>
 
@@ -144,12 +189,20 @@ export function DonationPost({ post }: { post: DonationPostData }) {
         <View style={styles.statsGroup}>
           <TouchableOpacity style={styles.statButton}>
             <Heart size={16} color="#4b5563" />
+<<<<<<< HEAD
             <Text style={[styles.statText, { marginLeft: 4 }]}>{post.likes}</Text>
+=======
+            <Text style={styles.statText}>{post.likes}</Text>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.statButton}>
             <MessageCircle size={16} color="#4b5563" />
+<<<<<<< HEAD
             <Text style={[styles.statText, { marginLeft: 4 }]}>{post.comments}</Text>
+=======
+            <Text style={styles.statText}>{post.comments}</Text>
+>>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
           </TouchableOpacity>
 
           <TouchableOpacity>
