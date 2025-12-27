@@ -49,7 +49,7 @@ export default function OpeningScreen({ onStart }: Props) {
 
   const pulseStyle = { transform: [{ scale: pulseAnim }] } as any;
 
-  const logoSource = require("../../assets/images/icon.png");
+  const logoSource = require("../assets/images/icon.png");
 
   return (
     <View style={[styles.background, styles.gradientBg]}>

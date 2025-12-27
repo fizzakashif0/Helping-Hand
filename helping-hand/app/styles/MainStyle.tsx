@@ -74,11 +74,8 @@ headerRow: {
   blood: { backgroundColor: "#d32f2f" },
   food: { backgroundColor: "#2e7d32" },
   financial: { backgroundColor: "#f9a825" },
-  urgent: { backgroundColor: "#c62828" },
-<<<<<<< HEAD
-  clothes: { backgroundColor: "#1565c0"},
-=======
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
+  clothes: { backgroundColor: "#1976d2" },
+  urgent: { backgroundColor: "#ff5722" },
 
   cardTitle: {
     fontSize: 18,

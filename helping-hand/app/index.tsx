@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Stack } from "expo-router";
 import { useState } from "react";
 import HelpingHandHomeScreen from "./components/mainpage_user";
@@ -22,19 +21,4 @@ export default function Index() {
       )}
     </>
   );
-=======
-import { Text, View } from "react-native";
-import HelpingHandHomeScreen from "./components/mainpage_user";
-import {Stack} from "expo-router";
-export default function Index() {
-
-  return <>
- <Stack.Screen
-     options={{
-        headerShown: false
-      }}
-    />
-    <HelpingHandHomeScreen />;
-    </>
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
 }

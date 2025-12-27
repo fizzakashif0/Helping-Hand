@@ -14,6 +14,20 @@ export default function LoginScreen() {
     router.push("/");
   };
 
+  const handleNGOLogin = () => {
+    // placeholder behaviour for NGO login
+    Alert.alert("NGO Login", `Email: ${email}\nPassword: ${password}`);
+    // after login, navigate to NGO home
+    router.push("/ngo-home" as any);
+  };
+
+  const handleAdminLogin = () => {
+    // placeholder behaviour for Admin login
+    Alert.alert("Admin Login", `Email: ${email}\nPassword: ${password}`);
+    // after login, navigate to Admin dashboard
+    router.push("/admin-dashboard" as any);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
@@ -36,7 +50,15 @@ export default function LoginScreen() {
       />
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
-        <Text style={styles.buttonText}>Log In</Text>
+        <Text style={styles.buttonText}>Log In as Donor/Recipient</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.ngoButton} onPress={handleNGOLogin} activeOpacity={0.85}>
+        <Text style={styles.buttonText}>Log In as NGO</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.adminButton} onPress={handleAdminLogin} activeOpacity={0.85}>
+        <Text style={styles.buttonText}>Log In as Admin</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/signup')} style={styles.link}>
@@ -72,6 +94,18 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#2D9E7A',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8
+  },
+  ngoButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8
+  },
+  adminButton: {
+    backgroundColor: '#8B5CF6',
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 8

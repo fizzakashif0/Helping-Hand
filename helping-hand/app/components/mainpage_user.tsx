@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -8,31 +6,16 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { addDonation } from "../store/donationStore";
 import styles from "../styles/MainStyle";
 import type { DonationType } from "./DonationPost";
 import { FilterSheet } from "./FilterSheet";
 import BottomNav, { NavItem } from "./Navbar";
-=======
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert
-} from "react-native";
-import styles from "../styles/MainStyle";
-import { Ionicons } from "@expo/vector-icons";
-import { FilterSheet } from "./FilterSheet";
-import type { DonationType } from "./DonationPost";
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
 
 interface DonationCardProps {
-  category: string;
+  category: DonationType;
   urgent?: boolean;
   title: string;
   description: string;
@@ -52,19 +35,12 @@ const DonationCard = ({
   likes,
   comments
 }: DonationCardProps) => {
-<<<<<<< HEAD
   const router = useRouter();
-=======
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   const categoryStyles: { [key: string]: any } = {
     blood: styles.blood,
     food: styles.food,
     financial: styles.financial,
-<<<<<<< HEAD
     clothes: styles.clothes,
-=======
-    urgent: styles.urgent,
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   };
 
   return (
@@ -74,19 +50,11 @@ const DonationCard = ({
           <Text style={styles.tagText}>{category}</Text>
         </View>
 
-<<<<<<< HEAD
-        
-          <View >
-            <Text style={styles.tagText}>Urgent</Text>
-          </View>
-        
-=======
         {urgent && (
           <View style={[styles.tag, styles.urgent]}>
             <Text style={styles.tagText}>Urgent</Text>
           </View>
         )}
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
       </View>
 
       <Text style={styles.cardTitle}>{title}</Text>
@@ -99,7 +67,6 @@ const DonationCard = ({
 
       <View style={styles.actionRow}>
         <View style={styles.stats}>
-<<<<<<< HEAD
           <TouchableOpacity
             onPress={() => {
               addDonation({
@@ -111,13 +78,10 @@ const DonationCard = ({
                 location,
                 status: "pending",
               });
-              router.push("/donations");
+              router.push("/donations" as any);
             }}
           >
-            <Ionicons name="bookmark-outline" />
-=======
-          <TouchableOpacity onPress={() => Alert.alert("Liked!", `${likes} people liked this`)}>
-            <Ionicons name="heart-outline" size={16} />
+            <Ionicons name="bookmark-outline" size={16} />
           </TouchableOpacity>
           <Text style={styles.statText}>{likes}</Text>
 
@@ -128,7 +92,6 @@ const DonationCard = ({
 
           <TouchableOpacity onPress={() => Alert.alert("Shared!", "Post shared successfully")}>
             <Ionicons name="share-social-outline" size={16} />
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
           </TouchableOpacity>
         </View>
 
@@ -141,14 +104,11 @@ const DonationCard = ({
 };
 
 export default function HelpingHandHomeScreen() {
+  const router = useRouter();
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<DonationType[]>([]);
-
-<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState<NavItem>("home");
 
-=======
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   const handleTypeToggle = (type: DonationType) => {
     setSelectedTypes((prev) =>
       prev.includes(type)
@@ -161,7 +121,6 @@ export default function HelpingHandHomeScreen() {
     setSelectedTypes([]);
   };
 
-<<<<<<< HEAD
   const feedData: Array<{
     id: string;
     category: DonationType;
@@ -283,8 +242,6 @@ export default function HelpingHandHomeScreen() {
     selectedTypes.length > 0 ? selectedTypes.includes(item.category) : true
   );
 
-=======
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
   return (
     <View style={styles.container}>
       {/* Filter Sheet Modal */}
@@ -297,24 +254,21 @@ export default function HelpingHandHomeScreen() {
       />
 
       {/* Header */}
-    <View style={[styles.header, styles.headerRow]}>
-  <View>
-    <Text style={styles.headerTitle}>Helping Hand</Text>
-    <Text style={styles.headerSubtitle}>
-      Making a difference, one donation at a time
-    </Text>
-  </View>
-  <TouchableOpacity 
-    style={styles.filterBtn} 
-    activeOpacity={0.85}
-    onPress={() => setFilterOpen(true)}
-  >
-    <Ionicons name="funnel" size={18} color="#fff" style={styles.filterIcon} />
-  </TouchableOpacity>
-</View>
-
-
-<<<<<<< HEAD
+      <View style={[styles.header, styles.headerRow]}>
+        <View>
+          <Text style={styles.headerTitle}>Helping Hand</Text>
+          <Text style={styles.headerSubtitle}>
+            Making a difference, one donation at a time
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.filterBtn}
+          activeOpacity={0.85}
+          onPress={() => setFilterOpen(true)}
+        >
+          <Ionicons name="funnel" size={18} color="#fff" style={styles.filterIcon} />
+        </TouchableOpacity>
+      </View>
 
       {/* Feed: Available Donations */}
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -333,69 +287,10 @@ export default function HelpingHandHomeScreen() {
         ))}
       </ScrollView>
 
-<BottomNav
-  activeTab={activeTab}
-  onTabChange={setActiveTab}
-/>
-=======
-     {/* Feed: Available Donations */}
-<ScrollView showsVerticalScrollIndicator={false}>
-
-  <DonationCard
-    category="food"
-    urgent={false}
-    title="Biryani Available for Distribution"
-    description="Freshly cooked chicken biryani is available for 10 people. Can be picked up within the next 2 hours."
-    location="Gulshan-e-Iqbal, Karachi"
-    time="5 min ago"
-    likes={12}
-    comments={3}
-  />
-
-  <DonationCard
-    category="food"
-    urgent={false}
-    title="5 Person Meal Available"
-    description="Home-cooked meal available for 5 people including rice, curry, and bread. Prefer same-day pickup."
-    location="Model Town, Lahore"
-    time="20 min ago"
-    likes={20}
-    comments={6}
-  />
-
-  <DonationCard
-    category="clothes"
-    urgent={false}
-    title="Winter Clothes Available for Children"
-    description="Gently used winter jackets, sweaters, and shoes available for children aged 5 to 10."
-    location="F-10, Islamabad"
-    time="1 hour ago"
-    likes={35}
-    comments={8}
-  />
-
-  <DonationCard
-    category="financial"
-    urgent={false}
-    title="Monthly Grocery Support Available"
-    description="Willing to sponsor monthly groceries for a family in need. NGOs or verified individuals preferred."
-    location="Saddar, Rawalpindi"
-    time="2 hours ago"
-    likes={28}
-    comments={7}
-  />
-
-</ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <Ionicons name="home-outline" size={24} />
-        <Ionicons name="heart-outline" size={24} />
-        <Ionicons name="add-circle-outline" size={30} />
-        <Ionicons name="notifications-outline" size={24} />
-        <Ionicons name="person-outline" size={24} color="red" />
-      </View>
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </View>
   );
 }

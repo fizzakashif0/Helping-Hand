@@ -1,9 +1,5 @@
 import React from "react";
-<<<<<<< HEAD
-import { StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
-=======
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native";
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -69,8 +65,5 @@ export function Button({
     </TouchableOpacity>
   );
 }
-<<<<<<< HEAD
 
 export default Button;
-=======
->>>>>>> 5538bb4c6b447a597a5a96cb18d8888f1556697e
