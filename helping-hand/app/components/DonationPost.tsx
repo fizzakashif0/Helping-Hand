@@ -22,7 +22,7 @@ const typeConfig = {
   clothes: { label: "Clothes", color: "#3b82f6" },
   food: { label: "Food", color: "#22c55e" },
   blood: { label: "Blood", color: "#b91c1c" },
-  financial: { label: "Financial", color: "#b45309" }
+  financial: { label: "Financial", color: "#f59e0b" }
 };
 
 const urgencyConfig = {
@@ -163,5 +163,3 @@ export function DonationPost({ post }: { post: DonationPostData }) {
     </View>
   );
 }
-
-export default DonationPost;

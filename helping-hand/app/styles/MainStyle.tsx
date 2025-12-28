@@ -1,142 +1,215 @@
 import { StyleSheet } from "react-native";
-
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#e60000",
+    backgroundColor: "#0E4A61",
   },
-
   header: {
-    backgroundColor:"#e60000" ,
-    padding: 20
+    backgroundColor: "#1A5F7A",
+    padding: 20,
+    paddingTop: 50,
   },
-
-  headerTitle: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "800",
-    fontStyle: "italic",
-    letterSpacing: 1.5,
-    fontFamily: "serif"
-  },
-headerRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center"
-},
-  filterBtn: {
-    padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-
-  filterIcon: {
-    opacity: 0.95
-  },
-
-  headerSubtitle: {
-    color: "#fff",
-    fontSize: 13,
-    marginTop: 4
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    margin: 12,
-    padding: 14,
-    borderRadius: 12
-  },
-
-  tagRow: {
+  headerRow: {
     flexDirection: "row",
-    marginBottom: 6
+    justifyContent: "space-between",
   },
-
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  title: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+  subtitle: {
+    color: "#ffffffaa",
+  },
+  bell: {
+    position: "relative",
+  },
+  notification: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "red",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationText: {
+    color: "white",
+    fontSize: 10,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  statCard: {
+    backgroundColor: "#ffffff22",
+    padding: 12,
     borderRadius: 12,
-    marginRight: 6
+    width: "30%",
+    alignItems: "center",
   },
-
-  tagText: {
-    color: "#fff",
+  statValue: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  statLabel: {
+    color: "#ffffffaa",
     fontSize: 12,
-    fontWeight: "600"
   },
-
-  blood: { backgroundColor: "#d32f2f" },
-  food: { backgroundColor: "#2e7d32" },
-  financial: { backgroundColor: "#f9a825" },
-  urgent: { backgroundColor: "#c62828" },
-
+  quickActions: {
+    flexDirection: "row",
+    padding: 16,
+    gap: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    borderRadius: 14,
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+  },
+  primaryBtn: {
+    backgroundColor: "white",
+  },
+  secondaryBtn: {
+    backgroundColor: "#ffffff22",
+    borderWidth: 1,
+    borderColor: "#ffffff55",
+  },
+  primaryText: {
+    color: "#1A5F7A",
+    fontWeight: "600",
+  },
+  secondaryText: {
+    color: "white",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  sectionTitle: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  seeAll: {
+    flexDirection: "row",
+    gap: 4,
+    alignItems: "center",
+  },
+  seeAllText: {
+    color: "#ffffffaa",
+    fontSize: 12,
+  },
+  card: {
+    backgroundColor: "#ffffff22",
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 12,
+  },
+  emoji: {
+    fontSize: 32,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "900",
     marginVertical: 8,
     color: "#1a1a1a",
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
-
+  cardSub: {
+    color: "#ffffffaa",
+    fontSize: 12,
+  },
   cardDesc: {
     fontSize: 14,
-    color: "#555"
+    color: "#555",
   },
-
+  progressBar: {
+    backgroundColor: "#ffffff44",
+    height: 6,
+    borderRadius: 3,
+    marginTop: 6,
+  },
+  progressFill: {
+    backgroundColor: "white",
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressText: {
+    color: "#ffffffaa",
+    fontSize: 10,
+    marginTop: 4,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeRed: {
+    backgroundColor: "red",
+  },
+  badgeYellow: {
+    backgroundColor: "orange",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+  },
+  typeText: {
+    color: "#ffffffaa",
+    fontSize: 12,
+  },
+  locationRow: {
+    flexDirection: "row",
+    gap: 4,
+    marginTop: 4,
+  },
+  food: { backgroundColor: "#2e7d32" },
+  financial: { backgroundColor: "#f9a825" },
+  clothes: { backgroundColor: "#1976d2" },
+  urgent: { backgroundColor: "#ff5722" },
   metaRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8
+    gap: 4,
+    marginTop: 4,
   },
-
-  metaText: {
+  locationText: {
+    color: "#ffffffaa",
     fontSize: 12,
-    color: "#777"
   },
-
-  actionRow: {
+  impactCard: {
+    backgroundColor: "#ffffff22",
+    margin: 16,
+    padding: 16,
+    borderRadius: 14,
+    gap: 6,
+  },
+  impactRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 12
+    gap: 12,
+    marginTop: 12,
   },
-
-  stats: {
-    flexDirection: "row",
-    alignItems: "center"
+  impactItem: {
+    flex: 1,
+    backgroundColor: "#ffffff22",
+    padding: 12,
+    borderRadius: 12,
   },
-
-  statText: {
-    marginHorizontal: 6,
-    fontSize: 12
-  },
-
-  requestBtn: {
-    backgroundColor: "#e60000",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20
-  },
-
-  requestText: {
-    color: "#fff",
-    fontWeight: "bold"
-  },
-
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff"
-  }
 });
 
 export default styles;
+

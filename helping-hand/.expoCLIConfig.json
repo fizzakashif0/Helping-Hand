@@ -1,0 +1,5 @@
+{
+  "projectId": "",
+  "shouldPromptProjectId": false,
+  "ignorePaths": ["node_modules", ".git", ".expo"]
+}
