@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { StyleSheet, Text, View } from "react-native";
 
+=======
+import React from "react";
+import clsx from "clsx";
+>>>>>>> origin/feature/mahnoor
 
 interface BadgeProps {
 label: string;

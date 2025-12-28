@@ -166,7 +166,31 @@ const styles = StyleSheet.create({
     color: "#ffffffaa",
     fontSize: 12,
   },
+<<<<<<< HEAD
   locationRow: {
+=======
+
+  blood: { backgroundColor: "#d32f2f" },
+  food: { backgroundColor: "#2e7d32" },
+  financial: { backgroundColor: "#f9a825" },
+  clothes: { backgroundColor: "#1976d2" },
+  urgent: { backgroundColor: "#ff5722" },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    marginVertical: 8,
+    color: "#1a1a1a",
+    letterSpacing: 0.5
+  },
+
+  cardDesc: {
+    fontSize: 14,
+    color: "#555"
+  },
+
+  metaRow: {
+>>>>>>> origin/feature/mahnoor
     flexDirection: "row",
     gap: 4,
     marginTop: 4,

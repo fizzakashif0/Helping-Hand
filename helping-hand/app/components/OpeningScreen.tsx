@@ -9,6 +9,38 @@ interface OpeningPageProps {
 
 export default function OpeningPage({ onStart }: OpeningPageProps) {
   const router = useRouter();
+  const logoAnim = React.useRef(new Animated.Value(0)).current;
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    Animated.sequence([
+      Animated.timing(logoAnim, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.exp),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [logoAnim, pulseAnim]);
+
+  const logoScale = logoAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
+  const logoOpacity = logoAnim;
+
+  const logoStyle = {
+    transform: [{ scale: logoScale }],
+    opacity: logoOpacity,
+  } as any;
+
+  const pulseStyle = { transform: [{ scale: pulseAnim }] } as any;
+
+  const logoSource = require("../assets/images/icon.png");
 
   return (
     <LinearGradient
