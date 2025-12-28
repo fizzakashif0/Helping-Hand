@@ -1,13 +1,10 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { HandHeart } from "lucide-react-native";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React from "react";
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-interface OpeningPageProps {
-  onStart: () => void;
-}
-
-export default function OpeningPage({ onStart }: OpeningPageProps) {
+export default function OpeningPage() {
   const router = useRouter();
   const logoAnim = React.useRef(new Animated.Value(0)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -86,14 +83,8 @@ export default function OpeningPage({ onStart }: OpeningPageProps) {
           blood, and financial donations
         </Text>
 
-        {/* Buttons */}
-        <View
-          style={styles.buttonGroup}
-        >
-          <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
-            <Text style={styles.primaryButtonText}>Get Started</Text>
-          </TouchableOpacity>
-
+        {/* Auth Links */}
+        <View style={styles.buttonGroup}>
           <View style={styles.authRow}>
             <TouchableOpacity onPress={() => router.push("/login")}>
               <Text style={styles.authText}>Login</Text>
@@ -177,17 +168,6 @@ const styles = StyleSheet.create({
   buttonGroup: {
     alignItems: "center",
     gap: 16,
-  },
-  primaryButton: {
-    backgroundColor: "white",
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 16,
-  },
-  primaryButtonText: {
-    color: "#1A5F7A",
-    fontSize: 16,
-    fontWeight: "600",
   },
   authRow: {
     flexDirection: "row",

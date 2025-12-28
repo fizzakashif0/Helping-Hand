@@ -1,6 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
 import {
-    Building2,
     HandHeart,
     Heart
 } from "lucide-react-native";
@@ -17,7 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 interface RoleSelectionProps {
-  onRoleSelect: (role: "donor" | "recipient" | "ngo") => void;
+  onRoleSelect: (role: "donor" | "recipient") => void;
 }
 
 export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
@@ -86,14 +85,7 @@ export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
           />
         </Animated.View>
 
-        <Animated.View entering={FadeInLeft.delay(600)}>
-          <RoleCard
-            icon={<Building2 size={32} color="#fff" />}
-            title="NGO / Organization"
-            subtitle="Organize events and campaigns"
-            onPress={() => onRoleSelect("ngo")}
-          />
-        </Animated.View>
+        {/* NGO option removed as requested */}
       </View>
 
       {/* Back */}

@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import {
-  Bell,
-  Heart,
-  Home,
-  PlusCircle,
-  User,
+    Bell,
+    Heart,
+    Home,
+    PlusCircle,
+    User,
 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { getUserRole, subscribeToUserRole } from "../store/userStore";
 
 export type NavItem =
   | "home"
@@ -22,13 +24,33 @@ interface BottomNavProps {
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const router = useRouter();
-  const navItems: Array<{ id: NavItem; icon: any; label: string; route?: string }> = [
-    { id: "home", icon: Home, label: "Home", route: "/home" },
-    { id: "donations", icon: Heart, label: "My Donations", route: "/donations" },
-    { id: "create", icon: PlusCircle, label: "Create", route: "/create" },
-    { id: "notifications", icon: Bell, label: "Messages", route: "/chat" },
-    { id: "profile", icon: User, label: "Profile", route: "/profile" },
+  const [userRole, setUserRole] = useState<string>(getUserRole() || "donor");
+
+  useEffect(() => {
+    const unsubscribe = subscribeToUserRole((role) => {
+      if (role) setUserRole(role);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Define navigation items based on user role
+  const getDonorNavItems = () => [
+    { id: "home" as NavItem, icon: Home, label: "Home", route: "/home" },
+    { id: "donations" as NavItem, icon: Heart, label: "My Donations", route: "/donations" },
+    { id: "create" as NavItem, icon: PlusCircle, label: "Create", route: "/create" },
+    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat" },
+    { id: "profile" as NavItem, icon: User, label: "Profile", route: "/profile" },
   ];
+
+  const getRecipientNavItems = () => [
+    { id: "home" as NavItem, icon: Home, label: "Home", route: "/home" },
+    { id: "donations" as NavItem, icon: Heart, label: "My Requests", route: "/my-requests" },
+    { id: "create" as NavItem, icon: PlusCircle, label: "Request", route: "/create-help-request" },
+    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat" },
+    { id: "profile" as NavItem, icon: User, label: "Profile", route: "/profile" },
+  ];
+
+  const navItems = userRole === "recipient" ? getRecipientNavItems() : getDonorNavItems();
 
   return (
     <View style={styles.container}>

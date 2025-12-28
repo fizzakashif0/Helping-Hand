@@ -10,8 +10,8 @@ export default function LoginScreen() {
   const handleLogin = () => {
     // placeholder behaviour
     Alert.alert("Login", `Email: ${email}\nPassword: ${password}`);
-    // after login, navigate to home
-    router.push("/");
+    // after login as Donor/Recipient, go to role selection screen
+    router.push("/role-selection");
   };
 
   const handleNGOLogin = () => {
