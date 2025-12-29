@@ -69,7 +69,7 @@ export default function NGOProfileScreen() {
         {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.profilePicture}>
-            <User size={48} color="#e60000" />
+            <User size={48} color="#1A5F7A" />
           </View>
           {isEditing && (
             <TouchableOpacity style={styles.cameraButton}>
@@ -211,12 +211,12 @@ export default function NGOProfileScreen() {
           <Text style={styles.sectionTitle}>Impact Statistics</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Building size={24} color="#e60000" />
+              <Building size={24} color="#1A5F7A" />
               <Text style={styles.statValue}>{profileData.totalEvents}</Text>
               <Text style={styles.statLabel}>Total Events</Text>
             </View>
             <View style={styles.statCard}>
-              <User size={24} color="#e60000" />
+              <User size={24} color="#1A5F7A" />
               <Text style={styles.statValue}>{profileData.totalBeneficiaries}</Text>
               <Text style={styles.statLabel}>Beneficiaries</Text>
             </View>
@@ -238,10 +238,10 @@ export default function NGOProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#1A5F7A",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: "35%",
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     borderRadius: 20,
     padding: 8,
   },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "#fff",
     marginBottom: 16,
   },
   field: {

@@ -68,22 +68,22 @@ export default function NGOReportsScreen() {
         {/* Overview Stats */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Calendar size={24} color="#e60000" />
+            <Calendar size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{reportData.totalEvents}</Text>
             <Text style={styles.statLabel}>Total Events</Text>
           </View>
           <View style={styles.statCard}>
-            <Users size={24} color="#e60000" />
+            <Users size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{reportData.totalParticipants}</Text>
             <Text style={styles.statLabel}>Participants</Text>
           </View>
           <View style={styles.statCard}>
-            <Package size={24} color="#e60000" />
+            <Package size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{reportData.totalDonations}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
           <View style={styles.statCard}>
-            <TrendingUp size={24} color="#e60000" />
+            <TrendingUp size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{reportData.impactScore}</Text>
             <Text style={styles.statLabel}>Impact Score</Text>
           </View>
@@ -130,7 +130,7 @@ export default function NGOReportsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Analytics Overview</Text>
           <View style={styles.analyticsCard}>
-            <BarChart3 size={48} color="#e60000" />
+            <BarChart3 size={48} color="#1A5F7A" />
             <Text style={styles.analyticsText}>
               Detailed analytics and charts will be displayed here. This includes
               donation trends, participant demographics, and event success metrics.
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",

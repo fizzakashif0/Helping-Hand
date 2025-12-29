@@ -70,7 +70,7 @@ export default function AdminDashboardScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Welcome Message */}
         <View style={styles.welcomeCard}>
-          <Shield size={32} color="#e60000" />
+          <Shield size={32} color="#8B5CF6" />
           <View style={styles.welcomeText}>
             <Text style={styles.welcomeTitle}>Welcome back, Admin</Text>
             <Text style={styles.welcomeSubtitle}>
@@ -111,28 +111,28 @@ export default function AdminDashboardScreen() {
               style={styles.actionButton}
               onPress={() => (router.push as any)("/user-management")}
             >
-              <Users size={24} color="#e60000" />
+              <Users size={24} color="#8B5CF6" />
               <Text style={styles.actionText}>User Management</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => (router.push as any)("/donation-monitoring")}
             >
-              <Package size={24} color="#e60000" />
+              <Package size={24} color="#8B5CF6" />
               <Text style={styles.actionText}>Donation Monitoring</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => (router.push as any)("/report-handling")}
             >
-              <AlertTriangle size={24} color="#e60000" />
+              <AlertTriangle size={24} color="#8B5CF6" />
               <Text style={styles.actionText}>Handle Reports</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => (router.push as any)("/analytics-reports")}
             >
-              <BarChart3 size={24} color="#e60000" />
+              <BarChart3 size={24} color="#8B5CF6" />
               <Text style={styles.actionText}>Analytics</Text>
             </TouchableOpacity>
           </View>
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#8B5CF6",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",

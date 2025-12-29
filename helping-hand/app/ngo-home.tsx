@@ -68,22 +68,22 @@ export default function NGOHomeScreen() {
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Calendar size={24} color="#e60000" />
+            <Calendar size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalEvents}</Text>
             <Text style={styles.statLabel}>Total Events</Text>
           </View>
           <View style={styles.statCard}>
-            <Users size={24} color="#e60000" />
+            <Users size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalParticipants}</Text>
             <Text style={styles.statLabel}>Participants</Text>
           </View>
           <View style={styles.statCard}>
-            <Package size={24} color="#e60000" />
+            <Package size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalDonations}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
           <View style={styles.statCard}>
-            <TrendingUp size={24} color="#e60000" />
+            <TrendingUp size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.activeEvents}</Text>
             <Text style={styles.statLabel}>Active Events</Text>
           </View>
@@ -150,10 +150,10 @@ export default function NGOHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#1A5F7A",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "#fff",
     marginBottom: 16,
   },
   actionsGrid: {
