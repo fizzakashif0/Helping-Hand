@@ -288,7 +288,15 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   section: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
     marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
@@ -308,6 +316,11 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 16,
     color: "#1f2937",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   input: {
     backgroundColor: "#fff",
@@ -340,11 +353,21 @@ const styles = StyleSheet.create({
   valueWithIcon: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   descriptionText: {
     fontSize: 16,
     color: "#4b5563",
     lineHeight: 24,
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   statsGrid: {
     flexDirection: "row",

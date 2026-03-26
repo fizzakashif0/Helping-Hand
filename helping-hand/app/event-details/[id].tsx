@@ -105,30 +105,28 @@ export default function EventDetailsScreen() {
         {/* Event Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Description</Text>
-          <View style={styles.sectionBox}>
-            <OutlineText style={styles.description}>{eventData.description}</OutlineText>
-          </View>
+          <Text style={styles.description}>{eventData.description}</Text>
         </View>
 
         {/* Event Details */}
         <View style={styles.detailsGrid}>
           <View style={styles.detailCard}>
-            <Calendar size={20} color="#8B5CF6" />
+            <Calendar size={20} color="#1A5F7A" />
             <Text style={styles.detailLabel}>Date</Text>
             <Text style={styles.detailValue}>{eventData.date}</Text>
           </View>
           <View style={styles.detailCard}>
-            <MapPin size={20} color="#8B5CF6" />
+            <MapPin size={20} color="#1A5F7A" />
             <Text style={styles.detailLabel}>Location</Text>
             <Text style={styles.detailValue}>{eventData.location}</Text>
           </View>
           <View style={styles.detailCard}>
-            <Clock size={20} color="#8B5CF6" />
+            <Clock size={20} color="#1A5F7A" />
             <Text style={styles.detailLabel}>Duration</Text>
             <Text style={styles.detailValue}>{eventData.duration}</Text>
           </View>
           <View style={styles.detailCard}>
-            <Target size={20} color="#8B5CF6" />
+            <Target size={20} color="#1A5F7A" />
             <Text style={styles.detailLabel}>Target</Text>
             <Text style={styles.detailValue}>${eventData.targetAmount}</Text>
           </View>
@@ -158,9 +156,7 @@ export default function EventDetailsScreen() {
         {eventData.specialInstructions && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Special Instructions</Text>
-            <View style={styles.sectionBox}>
-              <OutlineText style={styles.instructions}>{eventData.specialInstructions}</OutlineText>
-            </View>
+            <Text style={styles.instructions}>{eventData.specialInstructions}</Text>
           </View>
         )}
 
@@ -169,12 +165,12 @@ export default function EventDetailsScreen() {
           <Text style={styles.sectionTitle}>Current Progress</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Users size={24} color="#e60000" />
+              <Users size={24} color="#1A5F7A" />
               <Text style={styles.statValue}>{eventData.participants}</Text>
               <Text style={styles.statLabel}>Participants</Text>
             </View>
             <View style={styles.statCard}>
-              <Package size={24} color="#e60000" />
+              <Package size={24} color="#1A5F7A" />
               <Text style={styles.statValue}>${eventData.donations}</Text>
               <Text style={styles.statLabel}>Donations</Text>
             </View>
@@ -184,20 +180,18 @@ export default function EventDetailsScreen() {
         {/* Organizer */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Organizer</Text>
-          <View style={styles.sectionBox}>
-            <OutlineText style={styles.organizer}>{eventData.organizer}</OutlineText>
-          </View>
+          <Text style={styles.organizer}>{eventData.organizer}</Text>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsSection}>
           <TouchableOpacity style={styles.actionButton} onPress={handleViewParticipants}>
-            <Users size={20} color="#1f2937" />
+            <Users size={20} color="#fff" />
             <Text style={styles.actionButtonText}>View Participants</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={handleTrackDistribution}>
-            <Package size={20} color="#1f2937" />
+            <Package size={20} color="#fff" />
             <Text style={styles.actionButtonText}>Track Distribution</Text>
           </TouchableOpacity>
 
@@ -212,35 +206,13 @@ export default function EventDetailsScreen() {
   );
 }
 
-function OutlineText({ children, style }: { children: React.ReactNode; style?: any }) {
-  const offsets = [
-    { left: -1, top: -1 },
-    { left: -1, top: 1 },
-    { left: 1, top: -1 },
-    { left: 1, top: 1 },
-  ];
-  return (
-    <View style={{ position: "relative" }}>
-      {offsets.map((off, i) => (
-        <Text
-          key={i}
-          style={[style, { position: "absolute", left: off.left, top: off.top, color: "#e60000" }]}
-        >
-          {children}
-        </Text>
-      ))}
-      <Text style={style}>{children}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#1A5F7A",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -291,38 +263,9 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: "#000000",
+    color: "#fff",
     lineHeight: 24,
   },
-  descriptionBox: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionBox: {
-  backgroundColor: "#ffffff",
-  borderRadius: 12,
-  padding: 16,
-
-  borderWidth: 1.5,
-  borderColor: "#e60000",
-
-  elevation: 5,
-
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.2,
-  shadowRadius: 4,
-
-  marginBottom: 8,
-},
   detailsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -369,7 +312,7 @@ const styles = StyleSheet.create({
   },
   instructions: {
     fontSize: 14,
-    color: "#000000",
+    color: "#fff",
     lineHeight: 20,
   },
   statsSection: {
@@ -404,7 +347,7 @@ const styles = StyleSheet.create({
   },
   organizer: {
     fontSize: 16,
-    color: "#000000",
+    color: "#fff",
   },
   actionsSection: {
     gap: 12,
@@ -424,10 +367,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   completeButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#22c55e",
   },
   actionButtonText: {
-    color: "#1f2937",
+    color: "#1A5F7A",
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,

@@ -86,9 +86,9 @@ export default function UserManagementScreen() {
         <View style={styles.userInfo}>
           <View style={styles.nameRow}>
             {item.type === "user" ? (
-              <User size={20} color="#e60000" />
+              <User size={20} color="#8B5CF6" />
             ) : (
-              <Building size={20} color="#e60000" />
+              <Building size={20} color="#8B5CF6" />
             )}
             <Text style={styles.userName}>{item.name}</Text>
           </View>
@@ -208,10 +208,10 @@ export default function UserManagementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: 4,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -246,12 +246,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeFilterTab: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
   },
   filterTabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#6b7280",
+    color: "#ffffffaa",
   },
   activeFilterTabText: {
     color: "#fff",
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   userCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -288,12 +288,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "black",
     marginLeft: 8,
   },
   userEmail: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "grey",
     marginLeft: 28,
   },
   statusBadge: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   joinDate: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "grey",
   },
   actionButtons: {
     flexDirection: "row",

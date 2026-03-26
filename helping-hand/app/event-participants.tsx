@@ -137,10 +137,10 @@ export default function EventParticipantsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+     backgroundColor: "#1A5F7A",
   },
   header: {
-    backgroundColor: "#e60000",
+     backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#d5dbe3ff",
     fontWeight: "500",
   },
 });

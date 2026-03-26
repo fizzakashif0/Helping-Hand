@@ -1,36 +1,14 @@
-- [x] Create NGO Home Dashboard screen (app/ngo-home.tsx)
-- [x] Create Create Event Screen (app/create-event.tsx)
-- [x] Create Event Details Setup Screen (app/event-details-setup.tsx)
-- [x] Create Publish Event Confirmation Screen (app/publish-event-confirmation.tsx)
-- [x] Create Event Participants Screen (app/event-participants.tsx)
-- [x] Create Event Distribution Tracking Screen (app/event-distribution-tracking.tsx)
-- [x] Create Event Completion Screen (app/event-completion.tsx)
-- [x] Create NGO Reports Screen (app/ngo-reports.tsx)
-- [x] Create NGO Profile Screen (app/ngo-profile.tsx)
+# TODO: Update Card Styles in Admin Screens
 
-## Admin Side Screens
-- [ ] Create Admin Login Screen (app/admin-login.tsx)
-- [x] Create Admin Dashboard (app/admin-dashboard.tsx)
-- [ ] Create User Management Screen (app/user-management.tsx)
-- [x] Create Donation Monitoring Screen (app/donation-monitoring.tsx)
-- [ ] Create Report Handling Screen (app/report-handling.tsx)
-- [x] Create Analytics and Reports Screen (app/analytics-reports.tsx)
-=======
-## NGO Side Screens
-- [x] Create NGO Home Dashboard screen (app/ngo-home.tsx)
-- [x] Create Create Event Screen (app/create-event.tsx)
-- [x] Create Event Details Setup Screen (app/event-details-setup.tsx)
-- [x] Create Publish Event Confirmation Screen (app/publish-event-confirmation.tsx)
-- [x] Create Event Participants Screen (app/event-participants.tsx)
-- [x] Create Event Distribution Tracking Screen (app/event-distribution-tracking.tsx)
-- [x] Create Event Completion Screen (app/event-completion.tsx)
-- [x] Create NGO Reports Screen (app/ngo-reports.tsx)
-- [x] Create NGO Profile Screen (app/ngo-profile.tsx)
+## Overview
+Make cards white with black primary text and grey secondary text in admin profile, user management, analytics reports, donation monitoring, and handle reports screens.
 
-## Admin Side Screens
-- [x] Create Admin Login Screen (app/admin-login.tsx)
-- [x] Create Admin Dashboard (app/admin-dashboard.tsx)
-- [x] Create User Management Screen (app/user-management.tsx)
-- [x] Create Donation Monitoring Screen (app/donation-monitoring.tsx)
-- [x] Create Report Handling Screen (app/report-handling.tsx)
-- [x] Create Analytics and Reports Screen (app/analytics-reports.tsx)
+## Tasks
+- [x] Update admin-profile.tsx: Change card backgrounds to white, primary text to black, secondary text to grey
+- [ ] Update user-management.tsx: Change card backgrounds to white, primary text to black, secondary text to grey
+- [x] Update analytics-reports.tsx: Change card backgrounds to white, primary text to black, secondary text to grey
+- [ ] Update report-handling.tsx: Change card backgrounds to white, primary text to black, secondary text to grey
+- [x] Update donation-monitoring.tsx: Change card backgrounds to white, primary text to black, secondary text to grey
+
+## Followup
+- Verify changes look good and adjust if needed

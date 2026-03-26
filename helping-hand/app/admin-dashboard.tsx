@@ -16,6 +16,7 @@ import {
   BarChart3,
   Shield,
   LogOut,
+  User,
 } from "lucide-react-native";
 
 export default function AdminDashboardScreen() {
@@ -62,9 +63,17 @@ export default function AdminDashboardScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <LogOut size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => (router.push as any)("/admin-profile")}
+            style={styles.profileButton}
+          >
+            <User size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <LogOut size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -203,10 +212,10 @@ export default function AdminDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
-    backgroundColor: "#8B5CF6",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -217,6 +226,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 24,
     fontWeight: "bold",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  profileButton: {
+    padding: 8,
+    marginRight: 8,
   },
   logoutButton: {
     padding: 8,
@@ -287,7 +304,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "white",
     marginBottom: 16,
   },
   actionsGrid: {
@@ -347,6 +364,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "500",
+    color: "#1f2937",
   },
   activityDescription: {
     fontSize: 14,
@@ -355,7 +373,7 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#6b7280",
   },
   statusCard: {
     backgroundColor: "#fff",

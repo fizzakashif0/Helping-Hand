@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -15,12 +15,10 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Download,
 } from "lucide-react-native";
 
-export default function AnalyticsReportsScreen() {
+export default function AnalyticsOverviewScreen() {
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "year">("month");
 
   // Mock analytics data
   const analyticsData = {
@@ -42,25 +40,6 @@ export default function AnalyticsReportsScreen() {
       { type: "Blood", count: 78, percentage: 11 },
       { type: "Other", count: 32, percentage: 5 },
     ],
-    monthlyStats: [
-      { month: "Jan", donations: 4200, users: 120 },
-      { month: "Feb", donations: 4800, users: 145 },
-      { month: "Mar", donations: 5200, users: 160 },
-      { month: "Apr", donations: 4900, users: 155 },
-      { month: "May", donations: 5600, users: 180 },
-      { month: "Jun", donations: 6100, users: 195 },
-    ],
-    topNGOs: [
-      { name: "Green Earth Foundation", events: 12, beneficiaries: 2500 },
-      { name: "Helping Hands NGO", events: 10, beneficiaries: 2200 },
-      { name: "Community Aid Network", events: 8, beneficiaries: 1800 },
-      { name: "Local Charity Org", events: 7, beneficiaries: 1600 },
-    ],
-  };
-
-  const handleExportReport = () => {
-    // In a real app, this would generate and download a report
-    console.log("Exporting report...");
   };
 
   return (
@@ -73,73 +52,50 @@ export default function AnalyticsReportsScreen() {
         >
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Analytics & Reports</Text>
+        <Text style={styles.headerTitle}>Analytics Overview</Text>
         <TouchableOpacity
-          onPress={handleExportReport}
-          style={styles.exportButton}
+          onPress={() => (router.push as any)("/analytics-reports")}
+          style={styles.detailsButton}
         >
-          <Download size={24} color="#fff" />
+          <BarChart3 size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Period Selector */}
-        <View style={styles.periodSelector}>
-          {(["week", "month", "year"] as const).map(period => (
-            <TouchableOpacity
-              key={period}
-              style={[
-                styles.periodButton,
-                selectedPeriod === period && styles.periodButtonActive,
-              ]}
-              onPress={() => setSelectedPeriod(period)}
-            >
-              <Text
-                style={[
-                  styles.periodButtonText,
-                  selectedPeriod === period && styles.periodButtonTextActive,
-                ]}
-              >
-                {period.charAt(0).toUpperCase() + period.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         {/* Overview Cards */}
         <View style={styles.overviewSection}>
-          <Text style={styles.sectionTitle}>Overview</Text>
+          <Text style={styles.sectionTitle}>Key Metrics</Text>
           <View style={styles.overviewGrid}>
             <View style={styles.overviewCard}>
-              <Users size={24} color="#e60000" />
+              <Users size={24} color="#1A5F7A" />
               <Text style={styles.overviewValue}>{analyticsData.overview.totalUsers}</Text>
               <Text style={styles.overviewLabel}>Total Users</Text>
               <Text style={styles.growthText}>+{analyticsData.trends.userGrowth}</Text>
             </View>
             <View style={styles.overviewCard}>
-              <Package size={24} color="#e60000" />
+              <Package size={24} color="#1A5F7A" />
               <Text style={styles.overviewValue}>{analyticsData.overview.totalDonations}</Text>
               <Text style={styles.overviewLabel}>Total Donations</Text>
               <Text style={styles.growthText}>+{analyticsData.trends.donationGrowth}</Text>
             </View>
             <View style={styles.overviewCard}>
-              <Calendar size={24} color="#e60000" />
+              <Calendar size={24} color="#1A5F7A" />
               <Text style={styles.overviewValue}>{analyticsData.overview.totalEvents}</Text>
               <Text style={styles.overviewLabel}>Total Events</Text>
               <Text style={styles.growthText}>+{analyticsData.trends.eventGrowth}</Text>
             </View>
             <View style={styles.overviewCard}>
-              <TrendingUp size={24} color="#e60000" />
+              <TrendingUp size={24} color="#1A5F7A" />
               <Text style={styles.overviewValue}>{analyticsData.overview.activeUsers}</Text>
               <Text style={styles.overviewLabel}>Active Users</Text>
-              <Text style={styles.growthText}>This {selectedPeriod}</Text>
+              <Text style={styles.growthText}>This month</Text>
             </View>
           </View>
         </View>
 
         {/* Donation Types Chart */}
         <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Donation Types Distribution</Text>
+          <Text style={styles.sectionTitle}>Donation Types</Text>
           <View style={styles.chartCard}>
             {analyticsData.donationTypes.map((item, index) => (
               <View key={item.type} style={styles.chartItem}>
@@ -154,48 +110,9 @@ export default function AnalyticsReportsScreen() {
                     style={[
                       styles.progressFill,
                       { width: `${item.percentage}%` },
-                      { backgroundColor: ["#e60000", "#22c55e", "#3b82f6", "#f59e0b", "#8b5cf6"][index] },
+                      { backgroundColor: ["#8B5CF6", "#22c55e", "#3b82f6", "#f59e0b", "#ef4444"][index] },
                     ]}
                   />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Monthly Trends */}
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Monthly Trends</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.trendHeader}>
-              <Text style={styles.trendLabel}>Month</Text>
-              <Text style={styles.trendLabel}>Donations</Text>
-              <Text style={styles.trendLabel}>New Users</Text>
-            </View>
-            {analyticsData.monthlyStats.map((stat) => (
-              <View key={stat.month} style={styles.trendRow}>
-                <Text style={styles.trendMonth}>{stat.month}</Text>
-                <Text style={styles.trendValue}>{stat.donations}</Text>
-                <Text style={styles.trendValue}>{stat.users}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Top NGOs */}
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Top Performing NGOs</Text>
-          <View style={styles.chartCard}>
-            {analyticsData.topNGOs.map((ngo, index) => (
-              <View key={ngo.name} style={styles.ngoItem}>
-                <View style={styles.ngoRank}>
-                  <Text style={styles.ngoRankText}>{index + 1}</Text>
-                </View>
-                <View style={styles.ngoInfo}>
-                  <Text style={styles.ngoName}>{ngo.name}</Text>
-                  <Text style={styles.ngoStats}>
-                    {ngo.events} events • {ngo.beneficiaries} beneficiaries
-                  </Text>
                 </View>
               </View>
             ))}
@@ -207,25 +124,34 @@ export default function AnalyticsReportsScreen() {
           <Text style={styles.sectionTitle}>Quick Insights</Text>
           <View style={styles.insightsCard}>
             <View style={styles.insightItem}>
-              <BarChart3 size={20} color="#e60000" />
+              <BarChart3 size={20} color="#1A5F7A" />
               <Text style={styles.insightText}>
                 Food donations have increased by 25% this quarter
               </Text>
             </View>
             <View style={styles.insightItem}>
-              <PieChart size={20} color="#e60000" />
+              <PieChart size={20} color="#1A5F7A" />
               <Text style={styles.insightText}>
                 User engagement is highest on weekends
               </Text>
             </View>
             <View style={styles.insightItem}>
-              <TrendingUp size={20} color="#e60000" />
+              <TrendingUp size={20} color="#1A5F7A" />
               <Text style={styles.insightText}>
                 NGO participation has grown by 40% year-over-year
               </Text>
             </View>
           </View>
         </View>
+
+        {/* View Details Button */}
+        <TouchableOpacity
+          style={styles.detailsButtonCard}
+          onPress={() => (router.push as any)("/analytics-reports")}
+        >
+          <BarChart3 size={24} color="#1A5F7A" />
+          <Text style={styles.detailsButtonText}>View Detailed Analytics</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -252,34 +178,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  exportButton: {
+  detailsButton: {
     padding: 8,
   },
   content: {
     padding: 20,
-  },
-  periodSelector: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff22",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 20,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: 6,
-  },
-  periodButtonActive: {
-    backgroundColor: "#1A5F7A",
-  },
-  periodButtonText: {
-    fontSize: 14,
-    color: "#ffffffaa",
-  },
-  periodButtonTextActive: {
-    color: "#fff",
   },
   overviewSection: {
     marginBottom: 30,
@@ -296,7 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   overviewCard: {
-    backgroundColor: "white",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
@@ -311,12 +214,12 @@ const styles = StyleSheet.create({
   overviewValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "black",
+    color: "white",
     marginTop: 8,
   },
   overviewLabel: {
     fontSize: 12,
-    color: "grey",
+    color: "#ffffffaa",
     marginTop: 4,
   },
   growthText: {
@@ -329,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   chartCard: {
-    backgroundColor: "white",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
@@ -349,11 +252,11 @@ const styles = StyleSheet.create({
   chartItemLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "black",
+    color: "white",
   },
   chartItemValue: {
     fontSize: 14,
-    color: "grey",
+    color: "#ffffffaa",
   },
   progressBar: {
     height: 8,
@@ -364,77 +267,11 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 4,
   },
-  trendHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ffffff44",
-    marginBottom: 12,
-  },
-  trendLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "black",
-    width: "30%",
-    textAlign: "center",
-  },
-  trendRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  trendMonth: {
-    fontSize: 14,
-    color: "black",
-    width: "30%",
-    textAlign: "center",
-  },
-  trendValue: {
-    fontSize: 14,
-    color: "black",
-    width: "30%",
-    textAlign: "center",
-  },
-  ngoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ffffff44",
-  },
-  ngoRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#1A5F7A",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  ngoRankText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  ngoInfo: {
-    flex: 1,
-  },
-  ngoName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "black",
-    marginBottom: 2,
-  },
-  ngoStats: {
-    fontSize: 12,
-    color: "black",
-  },
   insightsSection: {
-    marginBottom: 20,
+    marginBottom: 30,
   },
   insightsCard: {
-    backgroundColor: "white",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
@@ -450,9 +287,28 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: 14,
-    color: "black",
+    color: "#ffffffaa",
     marginLeft: 12,
     flex: 1,
     lineHeight: 20,
+  },
+  detailsButtonCard: {
+    backgroundColor: "#ffffff22",
+    borderRadius: 12,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  detailsButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
+    marginLeft: 12,
   },
 });

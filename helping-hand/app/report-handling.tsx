@@ -200,10 +200,10 @@ export default function ReportHandlingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: 4,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeFilterTab: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
   },
   filterTabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#6b7280",
+    color: "#ffffffaa",
   },
   activeFilterTabText: {
     color: "#fff",
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   reportCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   reportType: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "black",
     marginBottom: 8,
   },
   priorityBadge: {
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
   reportDescription: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "black",
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -308,12 +308,12 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "grey",
     marginBottom: 4,
   },
   reportDate: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "grey",
   },
   actionButtons: {
     flexDirection: "row",

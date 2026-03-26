@@ -129,13 +129,16 @@ export default function NGOReportsScreen() {
         {/* Analytics Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Analytics Overview</Text>
-          <View style={styles.analyticsCard}>
+          <TouchableOpacity
+            style={styles.analyticsCard}
+            onPress={() => (router.push as any)("/analytics-overview")}
+          >
             <BarChart3 size={48} color="#1A5F7A" />
             <Text style={styles.analyticsText}>
               Detailed analytics and charts will be displayed here. This includes
               donation trends, participant demographics, and event success metrics.
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -145,7 +148,7 @@ export default function NGOReportsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
     backgroundColor: "#1A5F7A",
@@ -173,7 +176,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   statCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
@@ -188,12 +191,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "white",
     marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "#ffffffaa",
     marginTop: 4,
   },
   section: {
@@ -202,11 +205,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "white",
     marginBottom: 16,
   },
   eventCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -225,7 +228,7 @@ const styles = StyleSheet.create({
   eventName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "white",
     flex: 1,
   },
   statusBadge: {
@@ -248,11 +251,11 @@ const styles = StyleSheet.create({
   },
   eventStatText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#ffffffaa",
     marginLeft: 6,
   },
   analyticsCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
@@ -264,7 +267,7 @@ const styles = StyleSheet.create({
   },
   analyticsText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#ffffffaa",
     textAlign: "center",
     marginTop: 16,
     lineHeight: 20,
