@@ -1,18 +1,18 @@
 import { useRouter } from "expo-router";
 import {
-    ArrowLeft,
-    Clock,
-    Filter,
-    Heart,
-    MapPin,
+  ArrowLeft,
+  Clock,
+  Filter,
+  Heart,
+  MapPin,
 } from "lucide-react-native";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface DonationFeedProps {
@@ -235,6 +235,7 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
