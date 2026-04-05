@@ -79,9 +79,7 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
 
           <View style={styles.flexOne}>
             <Text style={styles.headerTitle}>Nearby Requests</Text>
-            <Text style={styles.headerSubtitle}>
-              Based on a 50 km radius
-            </Text>
+            <Text style={styles.headerSubtitle}>Based on a 50 km radius</Text>
           </View>
 
           <TouchableOpacity>
@@ -162,7 +160,7 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
                 <MapPin size={14} color="#6B7280" />
                 <Text style={styles.metaText}>
                   {request.location}
-                  {request.distanceKm !== undefined ? ` • ${request.distanceKm} km` : ""}
+                  {request.distanceKm !== undefined ? ` â€¢ ${request.distanceKm} km` : ""}
                 </Text>
               </View>
 
