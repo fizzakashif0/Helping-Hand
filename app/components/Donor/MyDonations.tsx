@@ -14,7 +14,8 @@ import {
   View
 } from "react-native";
 
-import { DonationRecord, getDonations, subscribe } from "../../store/donationStore";
+import { DEMO_DONOR_ID } from "../../lib/donations";
+import { DonationRecord, fetchUserDonations, getDonations, subscribe } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
 const typeConfig = {
@@ -88,15 +89,31 @@ function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
   );
 }
 
-export function MyDonations() {
+export default function MyDonations() {
   const [filterTab, setFilterTab] = useState<"all" | "completed" | "pending">("all");
   const [navTab, setNavTab] = useState<NavItem>("donations");
   const [donationHistory, setDonationHistory] = useState<DonationRecord[]>(() => getDonations());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Load donations from backend
+    loadDonations();
+    
+    // Subscribe to local store changes
     const unsubscribe = subscribe(setDonationHistory);
     return unsubscribe;
   }, []);
+
+  const loadDonations = async () => {
+    setLoading(true);
+    try {
+      await fetchUserDonations(DEMO_DONOR_ID);
+    } catch (error) {
+      console.error("Error loading donations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const completed = donationHistory.filter(d => d.status === "completed");
   const pending = donationHistory.filter(
@@ -154,7 +171,11 @@ export function MyDonations() {
 
       {/* List */}
       <ScrollView contentContainerStyle={styles.list}>
-        {data.length > 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading your donations...</Text>
+          </View>
+        ) : data.length > 0 ? (
           data.map(donation => (
             <DonationHistoryItem
               key={donation.id}
@@ -345,6 +366,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
     color: "#6B7280"
+  },
+
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  loadingText: {
+    color: "#6B7280",
+    fontSize: 14
   }
-});
-export default MyDonations; 
+}); 

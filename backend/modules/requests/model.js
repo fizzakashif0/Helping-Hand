@@ -7,6 +7,12 @@ const requestSchema = new mongoose.Schema({
     required: true
   },
 
+  postType: {
+    type: String,
+    enum: ["donation", "request"],
+    default: "request"
+  },
+
   donation: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Donation"
@@ -19,6 +25,19 @@ const requestSchema = new mongoose.Schema({
   },
 
   message: String,
+
+  quantityText: {
+    type: String,
+    default: "Not specified"
+  },
+
+  location: {
+    address: String,
+    coordinates: {
+      lat: Number,
+      lng: Number
+    }
+  },
 
   urgency: {
     type: String,

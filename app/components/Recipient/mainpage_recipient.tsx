@@ -7,7 +7,7 @@ import {
     Search,
     Shield
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -17,16 +17,12 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { DonationRecord, fetchAllDonations } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
 interface RecipientHomeProps {
   onNavigate: (screen: string) => void;
 }
-
-const mockNearbyDonations = [
-  { id: "1", type: "Food", title: "Fresh groceries available", location: "1.5 km away", donor: "Anonymous Donor" },
-  { id: "2", type: "Clothes", title: "Winter clothes for families", location: "2.8 km away", donor: "Community Helper" },
-];
 
 const mockActiveEvents = [
   { id: "1", name: "Winter Relief Drive 2024", ngo: "Hope Foundation", requests: 234, available: 266, image: "❄️" },
@@ -36,6 +32,29 @@ const mockActiveEvents = [
 export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavItem>("home");
+  const [nearbyDonations, setNearbyDonations] = useState<DonationRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadNearbyDonations();
+  }, []);
+
+  const loadNearbyDonations = async () => {
+    setLoading(true);
+    try {
+      // For now, fetch all donations (you can replace with actual geolocation later)
+      // const lat = 31.5497; // Example: Lahore coordinates
+      // const lng = 74.3436;
+      // const donations = await fetchNearbyDonations(lat, lng);
+      
+      const donations = await fetchAllDonations();
+      setNearbyDonations(donations);
+    } catch (error) {
+      console.error("Failed to load nearby donations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -119,16 +138,30 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
           </TouchableOpacity>
         </View>
 
-        {mockNearbyDonations.map((donation) => (
-          <TouchableOpacity key={donation.id} style={styles.card} onPress={() => onNavigate(`recipient-donation-details-${donation.id}`)}>
-            <View style={styles.badgeRow}>
-              <View style={styles.typeBadge}><Text style={styles.typeBadgeText}>{donation.type}</Text></View>
-              <Text style={styles.locationText}>{donation.location}</Text>
-            </View>
-            <Text style={styles.cardTitle}>{donation.title}</Text>
-            <Text style={styles.cardSubtitle}>from {donation.donor}</Text>
-          </TouchableOpacity>
-        ))}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading available donations...</Text>
+          </View>
+        ) : nearbyDonations.length > 0 ? (
+          nearbyDonations.map((donation) => (
+            <TouchableOpacity key={donation.id} style={styles.card} onPress={() => onNavigate(`recipient-donation-details-${donation.id}`)}>
+              <View style={styles.badgeRow}>
+                <View style={styles.typeBadge}><Text style={styles.typeBadgeText}>{donation.type.toUpperCase()}</Text></View>
+                <Text style={styles.locationText}>{donation.location}</Text>
+              </View>
+              <Text style={styles.cardTitle}>{donation.title}</Text>
+              <Text style={styles.cardSubtitle}>from {donation.recipientName}</Text>
+              {donation.amount && (
+                <Text style={styles.cardStats}>Amount: {donation.amount}</Text>
+              )}
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No donations available nearby</Text>
+            <Text style={styles.emptySubtext}>Check back soon!</Text>
+          </View>
+        )}
 
         {/* Status Dashboard */}
         <TouchableOpacity 
@@ -360,5 +393,33 @@ const styles = StyleSheet.create({
   statLabel: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 10,
+  },
+  loadingContainer: {
+    marginHorizontal: 20,
+    padding: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  emptyContainer: {
+    marginHorizontal: 20,
+    padding: 32,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
   },
 });

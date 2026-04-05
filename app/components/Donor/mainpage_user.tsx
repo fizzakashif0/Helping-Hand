@@ -6,7 +6,7 @@ import {
   MapPin,
   TrendingUp
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -15,28 +15,12 @@ import {
   View
 } from "react-native";
 import styles from "../../styles/MainStyle";
+import { RequestRecord, fetchNearbyRequests } from "../../store/requestStore";
 import BottomNav, { NavItem } from "../Navbar";
 import DonationFeed from "./DonationFeed";
 interface DonorHomeProps {
   onNavigate: (screen: string) => void;
 }
-
-const mockNearbyRequests = [
-  {
-    id: "1",
-    type: "Food",
-    title: "Food for 20 families",
-    location: "2.3 km away",
-    urgency: "high",
-  },
-  {
-    id: "2",
-    type: "Clothes",
-    title: "Winter clothes needed",
-    location: "3.5 km away",
-    urgency: "medium",
-  },
-];
 
 const mockActiveEvents = [
   {
@@ -45,7 +29,7 @@ const mockActiveEvents = [
     ngo: "Hope Foundation",
     donations: 234,
     goal: 500,
-    image: "❄️",
+    image: "Event",
   },
   {
     id: "2",
@@ -53,7 +37,7 @@ const mockActiveEvents = [
     ngo: "Care Together",
     donations: 567,
     goal: 1000,
-    image: "🌊",
+    image: "Relief",
   },
 ];
 
@@ -61,10 +45,24 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavItem>("home");
   const [feedModalVisible, setFeedModalVisible] = useState(false);
+  const [nearbyRequests, setNearbyRequests] = useState<RequestRecord[]>([]);
+
+  useEffect(() => {
+    loadNearbyRequests();
+  }, []);
+
+  const loadNearbyRequests = async () => {
+    try {
+      const requests = await fetchNearbyRequests(31.5497, 74.3436, 50);
+      setNearbyRequests(requests);
+    } catch (error) {
+      console.error("Failed to load nearby requests:", error);
+    }
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View>
@@ -80,7 +78,6 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Stats */}
         <View style={styles.statsRow}>
           {[
             { label: "Donations", value: 12 },
@@ -95,7 +92,6 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         </View>
       </View>
 
-      {/* Quick Actions */}
       <View style={styles.quickActions}>
         <TouchableOpacity
           style={[styles.actionBtn, styles.primaryBtn]}
@@ -114,7 +110,6 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         </TouchableOpacity>
       </View>
 
-      {/* NGO Events */}
       <SectionHeader
         title="Active NGO Events"
         onPress={() => onNavigate("ngo-events")}
@@ -147,13 +142,12 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         </TouchableOpacity>
       ))}
 
-      {/* Nearby Requests */}
       <SectionHeader
         title="Nearby Requests"
         onPress={() => router.push("/donation-feed")}
       />
 
-      {mockNearbyRequests.map((request) => (
+      {nearbyRequests.slice(0, 2).map((request) => (
         <TouchableOpacity
           key={request.id}
           style={styles.card}
@@ -169,7 +163,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
               ]}
             >
               <Text style={styles.badgeText}>
-                {request.urgency === "high" ? "Urgent" : "Medium"}
+                {request.urgency === "high" ? "Urgent" : request.urgency === "medium" ? "Medium" : "Low"}
               </Text>
             </View>
             <Text style={styles.typeText}>{request.type}</Text>
@@ -179,12 +173,14 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
 
           <View style={styles.locationRow}>
             <MapPin size={14} color="#ffffffaa" />
-            <Text style={styles.locationText}>{request.location}</Text>
+            <Text style={styles.locationText}>
+              {request.location}
+              {request.distanceKm !== undefined ? ` � ${request.distanceKm} km away` : ""}
+            </Text>
           </View>
         </TouchableOpacity>
       ))}
 
-      {/* Impact */}
       <View style={styles.impactCard}>
         <TrendingUp color="white" size={24} />
         <Text style={styles.cardTitle}>Your Impact</Text>
@@ -212,7 +208,6 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
   );
 }
 
-/* Helper Components */
 function SectionHeader({ title, onPress }: any) {
   return (
     <View style={styles.sectionHeader}>
@@ -233,5 +228,3 @@ function ImpactItem({ label, value }: any) {
     </View>
   );
 }
-
-

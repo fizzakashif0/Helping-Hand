@@ -6,7 +6,7 @@ import {
   Heart,
   MapPin,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -14,62 +14,30 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { RequestRecord, fetchNearbyRequests } from "../../store/requestStore";
 
 interface DonationFeedProps {
   onNavigate: (screen: string) => void;
   onBack: () => void;
 }
 
-const mockRequests = [
-  {
-    id: "1",
-    type: "Food",
-    title: "Food for 20 homeless families",
-    description: "Need non-perishable food items and fresh produce",
-    location: "Downtown Shelter",
-    distance: "2.3 km",
-    timeAgo: "5 min ago",
-    urgency: "high",
-    requester: "Hope Foundation",
-  },
-  {
-    id: "2",
-    type: "Clothes",
-    title: "Winter clothes for children",
-    description: "Collecting warm clothes, jackets, and blankets",
-    location: "Community Center",
-    distance: "3.5 km",
-    timeAgo: "1 hour ago",
-    urgency: "medium",
-    requester: "Kids Care NGO",
-  },
-  {
-    id: "3",
-    type: "Blood",
-    title: "O+ Blood urgently needed",
-    description: "Patient undergoing emergency surgery",
-    location: "City Hospital",
-    distance: "1.2 km",
-    timeAgo: "10 min ago",
-    urgency: "high",
-    requester: "City Hospital",
-  },
-  {
-    id: "4",
-    type: "Financial",
-    title: "Education fund for orphans",
-    description: "Help 15 children continue their studies",
-    location: "Bright Future Orphanage",
-    distance: "5.8 km",
-    timeAgo: "3 hours ago",
-    urgency: "low",
-    requester: "Bright Future Trust",
-  },
-];
-
 export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [requests, setRequests] = useState<RequestRecord[]>([]);
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  const loadRequests = async () => {
+    try {
+      const data = await fetchNearbyRequests(31.5497, 74.3436, 50);
+      setRequests(data);
+    } catch (error) {
+      console.error("Failed to load nearby requests:", error);
+    }
+  };
 
   const getUrgencyStyle = (urgency: string) => {
     switch (urgency) {
@@ -84,36 +52,35 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
 
   const getTypeStyle = (type: string) => {
     switch (type) {
-      case "Food":
+      case "food":
         return styles.typeFood;
-      case "Clothes":
+      case "clothes":
         return styles.typeClothes;
-      case "Blood":
+      case "blood":
         return styles.typeBlood;
-      case "Financial":
+      case "financial":
         return styles.typeFinancial;
       default:
         return styles.typeDefault;
     }
   };
 
-  const filteredRequests = mockRequests.filter(
-    (req) => selectedFilter === "all" || req.type === selectedFilter
+  const filteredRequests = requests.filter(
+    (request) => selectedFilter === "all" || request.type === selectedFilter
   );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack}>
             <ArrowLeft color="white" size={24} />
           </TouchableOpacity>
 
-          <View style={{ flex: 1 }}>
+          <View style={styles.flexOne}>
             <Text style={styles.headerTitle}>Nearby Requests</Text>
             <Text style={styles.headerSubtitle}>
-              Based on your location
+              Based on a 50 km radius
             </Text>
           </View>
 
@@ -122,13 +89,12 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
           </TouchableOpacity>
         </View>
 
-        {/* Filters */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterRow}
         >
-          {["all", "Food", "Clothes", "Blood", "Financial"].map((filter) => (
+          {["all", "food", "clothes", "blood", "financial"].map((filter) => (
             <TouchableOpacity
               key={filter}
               style={[
@@ -150,7 +116,6 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
         </ScrollView>
       </View>
 
-      {/* Feed */}
       <ScrollView contentContainerStyle={styles.feed}>
         {filteredRequests.map((request) => (
           <TouchableOpacity
@@ -161,17 +126,17 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
               router.push({
                 pathname: "/post",
                 params: {
-                  type: request.type.toLowerCase(),
+                  requestId: request.id,
+                  type: request.type,
                   title: request.title,
                   description: request.description,
                   location: request.location,
-                  timeAgo: request.timeAgo,
+                  timeAgo: request.date,
                   urgency: request.urgency,
                 },
               });
             }}
           >
-            {/* Badges */}
             <View style={styles.badgeRow}>
               <View style={[styles.badge, getTypeStyle(request.type)]}>
                 <Text style={styles.badgeText}>{request.type}</Text>
@@ -190,33 +155,26 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
 
             <Text style={styles.cardTitle}>{request.title}</Text>
             <Text style={styles.cardDesc}>{request.description}</Text>
-            <Text style={styles.cardRequester}>
-              by {request.requester}
-            </Text>
+            <Text style={styles.cardRequester}>by {request.requesterName}</Text>
 
-            {/* Location + Time */}
             <View style={styles.metaRow}>
               <View style={styles.metaItem}>
                 <MapPin size={14} color="#6B7280" />
                 <Text style={styles.metaText}>
-                  {request.location} â€¢ {request.distance}
+                  {request.location}
+                  {request.distanceKm !== undefined ? ` • ${request.distanceKm} km` : ""}
                 </Text>
               </View>
 
               <View style={styles.metaItem}>
                 <Clock size={14} color="#6B7280" />
-                <Text style={styles.metaText}>
-                  {request.timeAgo}
-                </Text>
+                <Text style={styles.metaText}>{request.date}</Text>
               </View>
             </View>
 
-            {/* Action */}
             <TouchableOpacity
               style={styles.helpButton}
-              onPress={() =>
-                onNavigate(`donation-details-${request.id}`)
-              }
+              onPress={() => onNavigate(`donation-details-${request.id}`)}
             >
               <Heart size={16} color="white" />
               <Text style={styles.helpButtonText}>Help Now</Text>
@@ -226,9 +184,7 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
 
         {filteredRequests.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>
-              No requests found in this category
-            </Text>
+            <Text style={styles.emptyText}>No nearby requests found</Text>
           </View>
         )}
       </ScrollView>
@@ -236,13 +192,14 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0E4A61",
   },
-
+  flexOne: {
+    flex: 1,
+  },
   header: {
     paddingTop: 48,
     paddingHorizontal: 20,
@@ -263,7 +220,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
   },
-
   filterRow: {
     marginTop: 8,
   },
@@ -284,19 +240,16 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: "#1A5F7A",
   },
-
   feed: {
     padding: 20,
     paddingBottom: 100,
   },
-
   card: {
     backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
   },
-
   badgeRow: {
     flexDirection: "row",
     gap: 8,
@@ -311,17 +264,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
-
   typeFood: { backgroundColor: "#DCFCE7" },
   typeClothes: { backgroundColor: "#F3E8FF" },
   typeBlood: { backgroundColor: "#FEE2E2" },
   typeFinancial: { backgroundColor: "#DBEAFE" },
   typeDefault: { backgroundColor: "#E5E7EB" },
-
   urgentHigh: { backgroundColor: "#EF4444" },
   urgentMedium: { backgroundColor: "#F59E0B" },
   urgentLow: { backgroundColor: "#3B82F6" },
-
   cardTitle: {
     color: "#1A5F7A",
     fontSize: 16,
@@ -337,7 +287,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 10,
   },
-
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -352,7 +301,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
   },
-
   helpButton: {
     backgroundColor: "#1A5F7A",
     borderRadius: 12,
@@ -366,7 +314,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
   },
-
   emptyState: {
     alignItems: "center",
     marginTop: 60,
