@@ -14,12 +14,15 @@ import { buildApiUrl } from "../../lib/api";
 import { DEMO_DONOR_ID, toBackendDonationType } from "../../lib/donations";
 import { addDonation } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
+import LocationPicker from "../common/LocationPicker";
+
 
 interface CreateDonationFormProps {
   onSubmit: () => void;
   onBack: () => void;
 }
-
+const [location, setLocation] = useState(null);
+<LocationPicker onLocationSelect={setLocation} />
 export function CreateDonationForm({
   onSubmit,
   onBack,
@@ -82,12 +85,9 @@ export function CreateDonationForm({
         type: toBackendDonationType(formData.type as any),
         description: `${trimmedTitle}\n${trimmedDescription}`,
         quantityText: trimmedQuantity || "Not specified",
-        location: {
-          address: trimmedLocation || "Not specified",
-          coordinates: {
-            lat: 31.5497, // TODO: Get actual coordinates
-            lng: 74.3436
-          }
+       latitude: location?.latitude,
+    longitude: location?.longitude,
+    landmark: location?.landmark,
         }
       };
 
