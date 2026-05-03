@@ -24,8 +24,7 @@ interface CreateDonationFormProps {
   onSubmit: () => void;
   onBack: () => void;
 }
-const [location, setLocation] = useState(null);
-<LocationPicker onLocationSelect={setLocation} />
+
 export function CreateDonationForm({
   onSubmit,
   onBack,
@@ -40,6 +39,7 @@ export function CreateDonationForm({
     urgency: "medium",
   });
   const [navTab, setNavTab] = useState<NavItem>("create");
+  const [location, setLocation] = useState<any>(null);
   const [popup, setPopup] = useState<{
     visible: boolean;
     title: string;
@@ -89,16 +89,27 @@ export function CreateDonationForm({
       }
 
       // Create donation object for backend
-      const donationData = {
+      const donationData: any = {
         userId: DEMO_DONOR_ID,
         type: toBackendDonationType(formData.type as DonationType),
         description: `${trimmedTitle}\n${trimmedDescription}`,
         quantityText: trimmedQuantity || "Not specified",
-       latitude: location?.latitude,
-    longitude: location?.longitude,
-    landmark: location?.landmark,
-        }
       };
+
+      // Add location if available (matches backend location model)
+      if (location?.latitude !== undefined && location?.longitude !== undefined) {
+        donationData.location = {
+          address: location.address || trimmedLocation || "Not specified",
+          coordinates: {
+            lat: location.latitude,
+            lng: location.longitude
+          }
+        };
+      } else if (trimmedLocation) {
+        donationData.location = {
+          address: trimmedLocation
+        };
+      }
 
       console.log("Sending donation data:", donationData); // Debug log
 
@@ -275,6 +286,16 @@ export function CreateDonationForm({
           <Text style={styles.helperText}>
             Your exact address will only be shared with confirmed recipients
           </Text>
+          
+          {/* Location Picker */}
+          <View style={{ marginTop: 12 }}>
+            <LocationPicker onLocationSelect={setLocation} />
+          </View>
+          {location && (
+            <Text style={styles.helperText}>
+              ✓ Location selected: {location.latitude?.toFixed(2)}, {location.longitude?.toFixed(2)}
+            </Text>
+          )}
         </View>
 
         {/* Urgency */}

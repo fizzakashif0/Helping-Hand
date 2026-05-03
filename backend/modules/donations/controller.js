@@ -1,4 +1,19 @@
 const Donation = require("./model");
+const mongoose = require("mongoose");
+const crypto = require("crypto");
+
+// Helper function to convert string IDs to valid MongoDB ObjectIds
+function convertToObjectId(stringId) {
+  if (!stringId) return null;
+  
+  if (mongoose.Types.ObjectId.isValid(stringId)) {
+    return stringId;
+  }
+  
+  // For demo/string IDs, generate a consistent hex string that looks like an ObjectId
+  const hash = crypto.createHash("md5").update(stringId).digest("hex").substring(0, 24);
+  return hash;
+}
 
 const DEFAULT_BROWSE_RADIUS_KM = 50;
 
@@ -58,13 +73,16 @@ async function findBrowseableDonations({ lat, lng, radiusKm = DEFAULT_BROWSE_RAD
 
 exports.createDonation = async (req, res) => {
   try {
+    const donorId = req.body.userId || req.body.donor;
+    const validDonorId = convertToObjectId(donorId);
+
     // Prepare donation data, handling quantity as string
     const donationData = {
-      donor: req.body.userId || req.body.donor,
+      donor: validDonorId,
       type: req.body.type,
       postType: "donation",
       description: req.body.description,
-      quantityText: req.body.quantityText || req.body.quantity || "Not specified", // Use quantityText field
+      quantityText: req.body.quantityText || req.body.quantity || "Not specified",
       location: req.body.location,
       images: req.body.images,
       status: "pending",
@@ -84,7 +102,8 @@ exports.getMyDonations = async (req, res) => {
     const userId = req.query.userId || req.params.donorId;
     if (!userId) return res.status(400).json({ message: "userId is required" });
 
-    const donations = await Donation.find({ donor: userId, postType: "donation" }).sort({ createdAt: -1 });
+    const validUserId = convertToObjectId(userId);
+    const donations = await Donation.find({ donor: validUserId, postType: "donation" }).sort({ createdAt: -1 });
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -137,7 +156,9 @@ exports.getDonationsByDonor = async (req, res) => {
   try {
     const { donorId } = req.params;
     const { status } = req.query;
-    const query = { donor: donorId };
+    
+    const validDonorId = convertToObjectId(donorId);
+    const query = { donor: validDonorId };
     if (status) query.status = status;
 
     const donations = await Donation.find(query).sort({ createdAt: -1 });
