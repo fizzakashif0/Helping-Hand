@@ -162,7 +162,7 @@ export default function DonationMonitoringScreen() {
         {/* Stats Overview */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Package size={20} color="#e60000" />
+            <Package size={20} color="#8B5CF6" />
             <Text style={styles.statValue}>{donations.length}</Text>
             <Text style={styles.statLabel}>Total Donations</Text>
           </View>
@@ -247,7 +247,7 @@ export default function DonationMonitoringScreen() {
                   style={styles.viewButton}
                   onPress={() => handleViewDetails(donation.id)}
                 >
-                  <Eye size={16} color="#e60000" />
+                  <Eye size={16} color="#8B5CF6" />
                   <Text style={styles.viewButtonText}>View Details</Text>
                 </TouchableOpacity>
                 {donation.status !== "flagged" && (
@@ -271,10 +271,10 @@ export default function DonationMonitoringScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -298,17 +298,18 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#ffffff44",
   },
   searchInput: {
     flex: 1,
     padding: 12,
     fontSize: 16,
+    color: "white",
   },
   filterButtons: {
     flexDirection: "row",
@@ -319,16 +320,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
+    borderColor: "#ffffff44",
+    backgroundColor: "#ffffff22",
   },
   filterButtonActive: {
-    backgroundColor: "#e60000",
-    borderColor: "#e60000",
+    backgroundColor: "#1A5F7A",
+    borderColor: "#1A5F7A",
   },
   filterButtonText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#ffffffaa",
   },
   filterButtonTextActive: {
     color: "#fff",
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "black",
     marginTop: 4,
   },
   statLabel: {
@@ -367,11 +368,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "white",
     marginBottom: 16,
   },
   donationCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
   donationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "black",
     marginBottom: 4,
   },
   donationSubtitle: {
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: "black",
     width: 60,
   },
   detailText: {
@@ -455,11 +456,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#e60000",
-    backgroundColor: "#fff",
+    borderColor: "#1A5F7A",
+    backgroundColor: "white",
   },
   viewButtonText: {
-    color: "#e60000",
+    color: "black",
     fontSize: 14,
     fontWeight: "500",
     marginLeft: 6,
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: "#fef2f2",
+    backgroundColor: "white",
   },
   flagButtonText: {
     color: "#ef4444",

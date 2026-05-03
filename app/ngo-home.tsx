@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
 
 export default function NGOHomeScreen() {
   const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Mock data for NGO dashboard
   const dashboardData = {
@@ -64,29 +65,41 @@ export default function NGOHomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Calendar size={24} color="#e60000" />
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => (router.push as any)("/total-events")}
+          >
+            <Calendar size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalEvents}</Text>
             <Text style={styles.statLabel}>Total Events</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Users size={24} color="#e60000" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => (router.push as any)("/total-participants")}
+          >
+            <Users size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalParticipants}</Text>
             <Text style={styles.statLabel}>Participants</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statCard}>
-            <Package size={24} color="#e60000" />
+            <Package size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.totalDonations}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
-          <View style={styles.statCard}>
-            <TrendingUp size={24} color="#e60000" />
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => {
+              // Navigate to the Active Events screen
+              (router.push as any)("/active-events");
+            }}
+          >
+            <TrendingUp size={24} color="#1A5F7A" />
             <Text style={styles.statValue}>{dashboardData.activeEvents}</Text>
             <Text style={styles.statLabel}>Active Events</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions */}
@@ -110,10 +123,10 @@ export default function NGOHomeScreen() {
           </View>
         </View>
 
-        {/* Recent Events */}
+        {/* Active Events */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Events</Text>
-          {dashboardData.recentEvents.map((event) => (
+          <Text style={styles.sectionTitle}>Active Events</Text>
+          {dashboardData.recentEvents.filter(event => event.status === "Active").map((event) => (
             <TouchableOpacity
               key={event.id}
               style={styles.eventCard}
@@ -125,8 +138,7 @@ export default function NGOHomeScreen() {
                   style={[
                     styles.statusBadge,
                     {
-                      backgroundColor:
-                        event.status === "Active" ? "#22c55e" : "#6b7280",
+                      backgroundColor: "#22c55e",
                     },
                   ]}
                 >
@@ -150,10 +162,10 @@ export default function NGOHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#1A5F7A",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -207,7 +219,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "#fff",
     marginBottom: 16,
   },
   actionsGrid: {

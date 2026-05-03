@@ -234,10 +234,10 @@ export default function AnalyticsReportsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0E4A61",
   },
   header: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     padding: 20,
     paddingTop: 50,
     flexDirection: "row",
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff22",
     borderRadius: 8,
     padding: 4,
     marginBottom: 20,
@@ -272,11 +272,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   periodButtonActive: {
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
   },
   periodButtonText: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "#ffffffaa",
   },
   periodButtonTextActive: {
     color: "#fff",
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "white",
     marginBottom: 16,
   },
   overviewGrid: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   overviewCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
@@ -311,12 +311,12 @@ const styles = StyleSheet.create({
   overviewValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1f2937",
+    color: "black",
     marginTop: 8,
   },
   overviewLabel: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "grey",
     marginTop: 4,
   },
   growthText: {
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   chartCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
@@ -349,15 +349,15 @@ const styles = StyleSheet.create({
   chartItemLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "black",
   },
   chartItemValue: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "grey",
   },
   progressBar: {
     height: 8,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#ffffff44",
     borderRadius: 4,
   },
   progressFill: {
@@ -369,13 +369,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: "#ffffff44",
     marginBottom: 12,
   },
   trendLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: "black",
     width: "30%",
     textAlign: "center",
   },
@@ -386,13 +386,13 @@ const styles = StyleSheet.create({
   },
   trendMonth: {
     fontSize: 14,
-    color: "#1f2937",
+    color: "black",
     width: "30%",
     textAlign: "center",
   },
   trendValue: {
     fontSize: 14,
-    color: "#6b7280",
+    color: "black",
     width: "30%",
     textAlign: "center",
   },
@@ -401,13 +401,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: "#ffffff44",
   },
   ngoRank: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#e60000",
+    backgroundColor: "#1A5F7A",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -423,18 +423,18 @@ const styles = StyleSheet.create({
   ngoName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1f2937",
+    color: "black",
     marginBottom: 2,
   },
   ngoStats: {
     fontSize: 12,
-    color: "#6b7280",
+    color: "black",
   },
   insightsSection: {
     marginBottom: 20,
   },
   insightsCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: 14,
-    color: "#4b5563",
+    color: "black",
     marginLeft: 12,
     flex: 1,
     lineHeight: 20,

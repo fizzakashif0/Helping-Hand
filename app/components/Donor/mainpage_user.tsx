@@ -1,3 +1,4 @@
+
 import { useRouter } from "expo-router";
 import {
   ArrowRight,
@@ -233,5 +234,3 @@ function ImpactItem({ label, value }: any) {
     </View>
   );
 }
-
-

@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
 
+// Clear existing model cache if it exists
+if (mongoose.models.Donation) {
+  delete mongoose.models.Donation;
+}
+if (mongoose.modelSchemas && mongoose.modelSchemas.Donation) {
+  delete mongoose.modelSchemas.Donation;
+}
+
 const donationSchema = new mongoose.Schema({
   donor: {
     type: mongoose.Schema.Types.ObjectId,
@@ -13,9 +21,18 @@ const donationSchema = new mongoose.Schema({
     required: true
   },
 
+  postType: {
+    type: String,
+    enum: ["donation", "request"],
+    default: "donation"
+  },
+
   description: String,
 
-  quantity: Number,
+  quantityText: {
+    type: String,
+    default: "Not specified"
+  },
 
   images: [String],
 
@@ -27,10 +44,17 @@ const donationSchema = new mongoose.Schema({
     }
   },
 
+  applicants: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }
+  ],
+
   status: {
     type: String,
-    enum: ["available", "completed"],
-    default: "available"
+    enum: ["pending", "available", "completed"],
+    default: "pending"
   },
 
   expiryTime: Date,
