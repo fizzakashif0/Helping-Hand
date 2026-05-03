@@ -1,26 +1,16 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Donation = require('./model');
-const Request = require('../requests/model');
-// Donor creates a donation
-router.post('/', async (req, res) => {
-  try {
-    const donation = new Donation(req.body);
-    await donation.save();
-    res.status(201).json({ message: 'Donation created successfully', donation });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+const donationController = require("./controller");
+const requestController = require("../requests/controller");
 
-// Donor views all requests (to see who needs help)
-router.get('/requests', async (req, res) => {
-  try {
-    const requests = await Request.find();
-    res.json(requests);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.post("/", donationController.createDonation);
+router.get("/", donationController.getAvailableDonations);
+router.get("/browse", donationController.getBrowseableDonations);
+router.get("/donor/:donorId", donationController.getDonationsByDonor);
+router.get("/nearby/:lat/:lng", donationController.getNearbyDonations);
+router.put("/:donationId", donationController.updateDonationStatus);
+
+// Backward-compatible alias for request listing from donations routes
+router.get("/requests", requestController.getAllRequests);
 
 module.exports = router;

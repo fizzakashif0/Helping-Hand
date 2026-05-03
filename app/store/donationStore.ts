@@ -1,3 +1,6 @@
+import { buildApiUrl } from "../lib/api";
+import { fromBackendDonationType } from "../lib/donations";
+
 export type DonationRecord = {
   id: string;
   type: "clothes" | "food" | "blood" | "financial";
@@ -50,47 +53,44 @@ let donations: DonationRecord[] = [
     location: "Hope Shelter, East Side",
     status: "in-progress",
   },
-  {
-    id: "5",
-    type: "financial",
-    title: "Education Fund",
-    recipientName: "Bright Future Orphanage",
-    amount: "$100",
-    date: "Dec 1, 2024",
-    location: "Bright Future Orphanage",
-    status: "completed",
-  },
-  {
-    id: "6",
-    type: "food",
-    title: "Meal Delivery",
-    recipientName: "Sunshine Care Home",
-    amount: "20 meals",
-    date: "Nov 28, 2024",
-    location: "Sunshine Care Home",
-    status: "in-progress",
-  },
-  {
-    id: "7",
-    type: "clothes",
-    title: "Professional Attire",
-    recipientName: "Employment Aid",
-    amount: "3 suits",
-    date: "Nov 25, 2024",
-    location: "Career Center, West",
-    status: "pending",
-  },
 ];
 
 type Subscriber = (items: DonationRecord[]) => void;
 const subscribers: Subscriber[] = [];
 
+const API_URL = buildApiUrl("/api/donations");
+
+function mapBackendStatus(status: string): DonationRecord["status"] {
+  if (status === "completed") {
+    return "completed";
+  }
+
+  if (status === "available" || status === "pending") {
+    return "pending";
+  }
+
+  return "in-progress";
+}
+
+function mapBackendDonation(d: any, recipientName: string): DonationRecord {
+  return {
+    id: d._id,
+    type: fromBackendDonationType(d.type),
+    title: d.description?.split("\n")[0] || "Donation",
+    recipientName,
+    amount: d.quantityText || d.quantity,
+    date: new Date(d.createdAt).toLocaleDateString(),
+    location: d.location?.address || "Not specified",
+    status: mapBackendStatus(d.status)
+  };
+}
+
 export function getDonations() {
   return donations.slice();
 }
 
-export function addDonation(d: Omit<DonationRecord, "id" | "status"> & { status?: DonationRecord["status"] }) {
-  const id = String(Date.now());
+export function addDonation(d: Omit<DonationRecord, "id"> | DonationRecord) {
+  const id = "id" in d ? d.id : String(Date.now());
   const newDonation: DonationRecord = {
     id,
     status: d.status ?? "pending",
@@ -102,8 +102,63 @@ export function addDonation(d: Omit<DonationRecord, "id" | "status"> & { status?
     location: d.location,
   };
   donations = [newDonation, ...donations];
-  subscribers.forEach((s) => s(getDonations()));
+  notifySubscribers();
   return newDonation;
+}
+
+export async function fetchNearbyDonations(lat: number, lng: number) {
+  try {
+    const response = await fetch(`${API_URL}/nearby/${lat}/${lng}`);
+    if (!response.ok) throw new Error("Failed to fetch nearby donations");
+    const data = await response.json();
+
+    const converted = data.map((d: any) => mapBackendDonation(d, "Nearby Donor"));
+
+    donations = converted;
+    notifySubscribers();
+    return converted;
+  } catch (error) {
+    console.error("Error fetching nearby donations:", error);
+    return donations;
+  }
+}
+
+export async function fetchUserDonations(donorId: string) {
+  try {
+    const response = await fetch(`${API_URL}/donor/${donorId}`);
+    if (!response.ok) throw new Error("Failed to fetch user donations");
+    const data = await response.json();
+
+    const converted = data.map((d: any) => mapBackendDonation(d, "Recipients"));
+
+    donations = converted;
+    notifySubscribers();
+    return converted;
+  } catch (error) {
+    console.error("Error fetching user donations:", error);
+    return donations;
+  }
+}
+
+export async function fetchAllDonations() {
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error("Failed to fetch donations");
+    const data = await response.json();
+
+    const converted = data.map((d: any) => mapBackendDonation(d, "Nearby Donor"));
+
+    donations = converted;
+    notifySubscribers();
+    return converted;
+  } catch (error) {
+    console.error("Error fetching all donations:", error);
+    return donations;
+  }
+}
+
+function notifySubscribers() {
+  subscribers.forEach((s) => s(getDonations()));
 }
 
 export function subscribe(cb: Subscriber) {

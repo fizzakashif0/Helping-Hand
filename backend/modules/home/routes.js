@@ -1,14 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const Donation = require('./model');
+const Donation = require('../donations/model');
 const Request = require('../requests/model');
 
 // Donor creates a donation
 router.post('/', async (req, res) => {
   try {
+    const userId = req.body.userId || req.user?.id;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
     const donation = new Donation({
       ...req.body,
-      donor: req.user.id  // track which donor created it
+      donor: userId
     });
     await donation.save();
     res.status(201).json({ message: 'Donation created successfully', donation });
@@ -30,7 +33,10 @@ router.get('/requests', async (req, res) => {
 // Donor views all their own donations
 router.get('/my-donations', async (req, res) => {
   try {
-    const donations = await Donation.find({ donor: req.user.id }).sort({ createdAt: -1 });
+    const userId = req.query.userId || req.user?.id;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
+    const donations = await Donation.find({ donor: userId }).sort({ createdAt: -1 });
     res.json({ message: 'Your donations fetched', donations });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,8 +46,11 @@ router.get('/my-donations', async (req, res) => {
 // Donor edits a donation
 router.put('/:id', async (req, res) => {
   try {
+    const userId = req.body.userId || req.user?.id;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
     const donation = await Donation.findOneAndUpdate(
-      { _id: req.params.id, donor: req.user.id }, // ensure donor owns it
+      { _id: req.params.id, donor: userId },
       req.body,
       { new: true }
     );
@@ -57,7 +66,10 @@ router.put('/:id', async (req, res) => {
 // Donor deletes a donation
 router.delete('/:id', async (req, res) => {
   try {
-    const donation = await Donation.findOneAndDelete({ _id: req.params.id, donor: req.user.id });
+    const userId = req.body.userId || req.user?.id;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    
+    const donation = await Donation.findOneAndDelete({ _id: req.params.id, donor: userId });
 
     if (!donation) return res.status(404).json({ error: 'Donation not found or not authorized' });
 
