@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Modal,
@@ -10,8 +9,12 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { buildApiUrl } from "../../lib/api";
-import { DEMO_DONOR_ID, toBackendDonationType } from "../../lib/donations";
+import { buildApiUrl, getApiBaseUrl } from "../../lib/api";
+import {
+  DEMO_DONOR_ID,
+  DonationType,
+  toBackendDonationType,
+} from "../../lib/donations";
 import { addDonation } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
@@ -24,7 +27,6 @@ export function CreateDonationForm({
   onSubmit,
   onBack,
 }: CreateDonationFormProps) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: "",
@@ -76,10 +78,17 @@ export function CreateDonationForm({
 
     setLoading(true);
     try {
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) {
+        throw new Error(
+          "Backend API not found. Start the backend on port 5000 or set EXPO_PUBLIC_API_URL to http://YOUR_LOCAL_IP:5000."
+        );
+      }
+
       // Create donation object for backend
       const donationData = {
         userId: DEMO_DONOR_ID,
-        type: toBackendDonationType(formData.type as any),
+        type: toBackendDonationType(formData.type as DonationType),
         description: `${trimmedTitle}\n${trimmedDescription}`,
         quantityText: trimmedQuantity || "Not specified",
         location: {
@@ -116,7 +125,7 @@ export function CreateDonationForm({
       // Add to local store
       addDonation({
         id: result._id || Date.now().toString(),
-        type: formData.type as any,
+        type: formData.type as DonationType,
         title: trimmedTitle,
         recipientName: "Nearby Recipients",
         amount: trimmedQuantity,
