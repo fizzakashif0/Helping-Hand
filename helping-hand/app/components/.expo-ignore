@@ -1,0 +1,11 @@
+# Prevent Expo Router from treating component folders as routes
+**/Chat.tsx
+**/RoleSelectionScreen.tsx
+**/badge.tsx
+**/button.tsx
+**/MyProfile.tsx
+**/store/**
+**/ui/**
+**/styles/**
+**/Navbar.tsx
+**/OpeningScreen.tsx
