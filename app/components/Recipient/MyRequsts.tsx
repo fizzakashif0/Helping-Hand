@@ -10,6 +10,11 @@ import {
 } from "react-native";
 import { DEMO_REQUESTER_ID } from "../../lib/donations";
 import {
+  DonationRequestRecord,
+  fetchRecipientDonationClaims,
+  subscribeRecipientDonationClaims,
+} from "../../store/donationRequestStore";
+import {
   RequestRecord,
   fetchMyRequests,
   getRequests,
@@ -22,14 +27,25 @@ interface MyRequestsProps {
 }
 
 export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
+  const [listKind, setListKind] = useState<"help" | "donations">("help");
   const [filter, setFilter] =
     useState<"all" | "active" | "matched" | "fulfilled">("all");
+  const [donationFilter, setDonationFilter] = useState<
+    "all" | "pending" | "accepted" | "rejected" | "completed"
+  >("all");
   const [requests, setRequests] = useState<RequestRecord[]>(() => getRequests());
+  const [donationClaims, setDonationClaims] = useState<DonationRequestRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadRequests();
     return subscribeRequests(setRequests);
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeRecipientDonationClaims(setDonationClaims);
+    loadDonationClaims();
+    return unsub;
   }, []);
 
   const loadRequests = async () => {
@@ -40,6 +56,14 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
       console.error("Failed to load requests:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDonationClaims = async () => {
+    try {
+      await fetchRecipientDonationClaims(DEMO_REQUESTER_ID);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -62,12 +86,25 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
           return true;
         });
 
-  const stats = {
-    total: requests.length,
-    active: requests.filter((request) => request.status === "pending").length,
-    matched: requests.filter((request) => request.status === "approved").length,
-    fulfilled: requests.filter((request) => request.status === "completed").length,
-  };
+  const filteredDonationClaims = donationClaims.filter((r) => {
+    if (donationFilter === "all") return true;
+    return r.status === donationFilter;
+  });
+
+  const stats =
+    listKind === "help"
+      ? {
+          total: requests.length,
+          active: requests.filter((request) => request.status === "pending").length,
+          matched: requests.filter((request) => request.status === "approved").length,
+          fulfilled: requests.filter((request) => request.status === "completed").length,
+        }
+      : {
+          total: donationClaims.length,
+          active: donationClaims.filter((r) => r.status === "pending").length,
+          matched: donationClaims.filter((r) => r.status === "accepted").length,
+          fulfilled: donationClaims.filter((r) => r.status === "completed").length,
+        };
 
   return (
     <View style={styles.container}>
@@ -81,6 +118,27 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
       </View>
 
       <ScrollView>
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[styles.modeChip, listKind === "help" && styles.modeChipActive]}
+            onPress={() => setListKind("help")}
+          >
+            <Text style={[styles.modeChipText, listKind === "help" && styles.modeChipTextActive]}>
+              Help requests
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeChip, listKind === "donations" && styles.modeChipActive]}
+            onPress={() => setListKind("donations")}
+          >
+            <Text
+              style={[styles.modeChipText, listKind === "donations" && styles.modeChipTextActive]}
+            >
+              Donation pickups
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.statsCard}>
           {[
             { label: "Total", value: stats.total },
@@ -97,29 +155,52 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
           ))}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {["all", "active", "matched", "fulfilled"].map((value) => (
-            <TouchableOpacity
-              key={value}
-              style={[styles.filterBtn, filter === value && styles.filterActive]}
-              onPress={() => setFilter(value as any)}
-            >
-              <Text
-                style={[styles.filterText, filter === value && styles.filterTextActive]}
+        {listKind === "help" ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            {["all", "active", "matched", "fulfilled"].map((value) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.filterBtn, filter === value && styles.filterActive]}
+                onPress={() => setFilter(value as any)}
               >
-                {value === "all"
-                  ? "All Requests"
-                  : value.charAt(0).toUpperCase() + value.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[styles.filterText, filter === value && styles.filterTextActive]}
+                >
+                  {value === "all"
+                    ? "All Requests"
+                    : value.charAt(0).toUpperCase() + value.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+            {(
+              ["all", "pending", "accepted", "rejected", "completed"] as const
+            ).map((value) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.filterBtn, donationFilter === value && styles.filterActive]}
+                onPress={() => setDonationFilter(value)}
+              >
+                <Text
+                  style={[
+                    styles.filterText,
+                    donationFilter === value && styles.filterTextActive,
+                  ]}
+                >
+                  {value === "all" ? "All" : value.charAt(0).toUpperCase() + value.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
-        {loading ? (
+        {loading && listKind === "help" ? (
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyText}>Loading your requests...</Text>
           </View>
-        ) : (
+        ) : listKind === "help" ? (
           <FlatList
             data={filteredRequests}
             keyExtractor={(item) => item.id}
@@ -169,7 +250,7 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
                 <View style={styles.footer}>
                   <View style={styles.footerStats}>
                     <Text style={styles.meta}>Type: {item.type}</Text>
-                    <Text style={styles.meta}>Qty: {item.quantity || "Not specified"}</Text>
+                    <Text style={styles.meta}>Qty: {item.amount || "Not specified"}</Text>
                   </View>
 
                   {item.status === "approved" && (
@@ -188,6 +269,39 @@ export default function MyRequests({ onNavigate, onBack }: MyRequestsProps) {
                   )}
                 </View>
               </TouchableOpacity>
+            )}
+          />
+        ) : (
+          <FlatList
+            data={filteredDonationClaims}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyText}>No donation pickup requests yet</Text>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <View style={styles.badgeRow}>
+                  <Text style={[styles.statusBadge, donationStatusStyle(item.status)]}>
+                    {item.status.toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={styles.title}>{item.donationTitle}</Text>
+                {item.message ? (
+                  <Text style={styles.desc} numberOfLines={3}>
+                    {item.message}
+                  </Text>
+                ) : null}
+                <View style={styles.row}>
+                  <Ionicons name="time-outline" size={14} />
+                  <Text style={styles.meta}>
+                    {new Date(item.createdAt).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
             )}
           />
         )}
@@ -214,8 +328,42 @@ const statusStyle = (status: string) => ({
       : "#ef4444",
 });
 
+const donationStatusStyle = (status: string) => ({
+  backgroundColor:
+    status === "pending"
+      ? "#f59e0b"
+      : status === "accepted"
+      ? "#22c55e"
+      : status === "completed"
+      ? "#6b7280"
+      : status === "rejected"
+      ? "#ef4444"
+      : "#6b7280",
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
+  modeRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  modeChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  modeChipActive: {
+    backgroundColor: "#1A5F7A",
+    borderColor: "#1A5F7A",
+  },
+  modeChipText: { color: "#555", fontWeight: "600", fontSize: 13 },
+  modeChipTextActive: { color: "#fff" },
   header: {
     backgroundColor: "#1A5F7A",
     paddingTop: 50,

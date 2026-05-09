@@ -1,66 +1,99 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-    FlatList,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { timeAgo } from "../../lib/timeAgo";
+import {
+  DonationRecord,
+  fetchBrowseDonationsDetached,
+  fetchAvailableDonationsDetached,
+} from "../../store/donationStore";
 
 interface BrowseDonationsProps {
-  onNavigate: (screen: string) => void;
   onBack: () => void;
 }
 
-const mockDonations = [
-  {
-    id: "1",
-    type: "Food",
-    title: "Fresh groceries and canned goods",
-    description: "Rice, pasta, canned vegetables, and fresh produce available",
-    location: "1.2",
-    donor: "Sarah Johnson",
-    image: "🥘",
-    availability: "Available now",
-    quantity: "Enough for 4-5 people",
-    verified: true,
-  },
-  {
-    id: "2",
-    type: "Clothes",
-    title: "Winter clothing collection",
-    description: "Jackets, sweaters, warm clothes",
-    location: "2.5",
-    donor: "Community Helper",
-    image: "👕",
-    availability: "Available today",
-    quantity: "Multiple items",
-    verified: true,
-  },
-];
+const typeEmoji: Record<string, string> = {
+  food: "🍽️",
+  clothes: "👕",
+  blood: "🩸",
+  financial: "💰",
+};
 
-export default function BrowseDonations({
-  onNavigate,
-  onBack,
-}: BrowseDonationsProps) {
+function categoryMatches(selected: string, item: DonationRecord) {
+  if (selected === "All") return true;
+  if (selected === "Financial") return item.type === "financial";
+  return selected.toLowerCase() === item.type;
+}
+
+export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [list, setList] = useState<DonationRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [locNote, setLocNote] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLocNote("");
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocNote("Location off — showing all available listings.");
+        const all = await fetchAvailableDonationsDetached();
+        setList(all);
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      const rows = await fetchBrowseDonationsDetached(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        50
+      );
+      setList(rows);
+    } catch (e) {
+      console.error(e);
+      try {
+        const all = await fetchAvailableDonationsDetached();
+        setList(all);
+      } catch {
+        setList([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const categories = ["All", "Food", "Clothes", "Financial", "Blood"];
 
-  const filteredDonations = mockDonations.filter(
+  const filteredDonations = list.filter(
     (d) =>
-      (selectedCategory === "All" || d.type === selectedCategory) &&
+      categoryMatches(selectedCategory, d) &&
       (d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        (d.shortDescription || "").toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const typeLabel = (t: string) =>
+    t === "financial" ? "Financial" : t.charAt(0).toUpperCase() + t.slice(1);
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -69,6 +102,7 @@ export default function BrowseDonations({
 
         <Text style={styles.title}>Browse Available Help</Text>
         <Text style={styles.subtitle}>Find donations near you</Text>
+        {locNote ? <Text style={styles.locNote}>{locNote}</Text> : null}
 
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color="#ccc" />
@@ -82,7 +116,6 @@ export default function BrowseDonations({
         </View>
       </View>
 
-      {/* Categories */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
         {categories.map((cat) => (
           <TouchableOpacity
@@ -105,66 +138,80 @@ export default function BrowseDonations({
         ))}
       </ScrollView>
 
-      {/* Donation List */}
-      <FlatList
-        data={filteredDonations}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              onNavigate(`recipient-donation-details-${item.id}`)
-            }
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.emoji}>{item.image}</Text>
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#1A5F7A" />
+          <Text style={styles.loadingText}>Finding help near you…</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredDonations}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+          ListEmptyComponent={
+            <Text style={styles.emptyList}>No donations match your filters.</Text>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/recipient-donation/${item.id}`)}
+            >
+              <View style={styles.cardHeader}>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
+                ) : (
+                  <Text style={styles.emoji}>{typeEmoji[item.type] || "📦"}</Text>
+                )}
 
-              <View style={{ flex: 1 }}>
-                <View style={styles.badgeRow}>
-                  <Text style={styles.badge}>{item.type}</Text>
-                  {item.verified && (
-                    <Text style={styles.verified}>✓ Verified</Text>
-                  )}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.badgeRow}>
+                    <Text style={styles.badge}>{typeLabel(item.type)}</Text>
+                  </View>
+
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>
+                    {item.shortDescription || item.title}
+                  </Text>
                 </View>
+              </View>
 
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>
-                  {item.description}
+              <View style={styles.infoRow}>
+                <Ionicons name="location-outline" size={16} color="#1A5F7A" />
+                <Text style={styles.infoText}>
+                  {item.location}
+                  {item.distanceKm != null ? ` · ${item.distanceKm} km` : ""}
                 </Text>
               </View>
-            </View>
 
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={16} color="#1A5F7A" />
-              <Text style={styles.infoText}>{item.location} km away</Text>
-            </View>
+              <View style={styles.infoBetween}>
+                <Text style={styles.label}>Quantity</Text>
+                <Text>{item.amount || "—"}</Text>
+              </View>
 
-            <View style={styles.infoBetween}>
-              <Text style={styles.label}>Quantity</Text>
-              <Text>{item.quantity}</Text>
-            </View>
+              <View style={styles.infoBetween}>
+                <Text style={styles.label}>Posted</Text>
+                <Text style={{ color: "green" }}>
+                  {timeAgo(item.postedAtIso || item.date)}
+                </Text>
+              </View>
 
-            <View style={styles.infoBetween}>
-              <Text style={styles.label}>Availability</Text>
-              <Text style={{ color: "green" }}>{item.availability}</Text>
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.donor}>{item.donor}</Text>
-              <TouchableOpacity
-                style={styles.requestBtn}
-                onPress={() => onNavigate("request-donation")}
-              >
-                <Text style={styles.requestText}>Request</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+              <View style={styles.footer}>
+                <Text style={styles.donor}>Nearby listing</Text>
+                <TouchableOpacity
+                  style={styles.requestBtn}
+                  onPress={() => router.push(`/recipient-donation/${item.id}`)}
+                >
+                  <Text style={styles.requestText}>Request</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -192,6 +239,11 @@ const styles = StyleSheet.create({
   subtitle: {
     color: "#d0e4ee",
     marginBottom: 12,
+  },
+  locNote: {
+    color: "#fde68a",
+    fontSize: 12,
+    marginBottom: 8,
   },
   searchBox: {
     flexDirection: "row",
@@ -236,6 +288,11 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     gap: 12,
+  },
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
   },
   emoji: {
     fontSize: 36,
@@ -290,6 +347,7 @@ const styles = StyleSheet.create({
   },
   donor: {
     color: "#555",
+    fontSize: 12,
   },
   requestBtn: {
     backgroundColor: "#1A5F7A",
@@ -299,5 +357,18 @@ const styles = StyleSheet.create({
   },
   requestText: {
     color: "#fff",
+  },
+  loadingBox: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#666",
+  },
+  emptyList: {
+    textAlign: "center",
+    color: "#888",
+    marginTop: 24,
   },
 });

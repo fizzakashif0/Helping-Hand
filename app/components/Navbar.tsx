@@ -67,10 +67,22 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             }}
             activeOpacity={0.7}
           >
-            <Icon size={22} color={isActive ? "#dc2626" : "#6b7280"} />
-            <Text style={[styles.label, { color: isActive ? "#dc2626" : "#6b7280" }]}> 
-              {label}
-            </Text>
+            {[
+              <Icon
+                key="icon"
+                size={22}
+                color={isActive ? "#dc2626" : "#6b7280"}
+              />,
+              <Text
+                key="label"
+                style={[
+                  styles.label,
+                  { color: isActive ? "#dc2626" : "#6b7280" },
+                ]}
+              >
+                {label}
+              </Text>,
+            ]}
           </TouchableOpacity>
         );
       })}
