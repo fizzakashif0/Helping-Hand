@@ -1,18 +1,15 @@
 const express = require("express");
-const router = express.Router();
 
 const authController = require("./controller");
-const { verifyJWT, requireRole } = require("../../shared/authMiddleware");
 
-router.post("/signup", authController.signup);
+const router = express.Router();
+
+router.post("/register", authController.register);
 router.post("/login", authController.login);
 
-router.get("/me", verifyJWT, authController.me);
-
-// Example role-guard endpoint
-router.get("/admin-only", verifyJWT, requireRole(["admin"]), (req, res) => {
-  res.json({ ok: true, role: req.user.role });
-});
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/verify-otp", authController.verifyOtp);
+router.post("/reset-password", authController.resetPassword);
 
 module.exports = router;
 

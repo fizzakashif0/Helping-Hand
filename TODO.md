@@ -1,20 +1,10 @@
-# TODO: Implement NGO and Admin Screens for Helping-Hand App
+# TODO
 
-## NGO Side Screens
-- [x] Create NGO Home Dashboard screen (app/ngo-home.tsx)
-- [x] Create Create Event Screen (app/create-event.tsx)
-- [x] Create Event Details Setup Screen (app/event-details-setup.tsx)
-- [x] Create Publish Event Confirmation Screen (app/publish-event-confirmation.tsx)
-- [x] Create Event Participants Screen (app/event-participants.tsx)
-- [x] Create Event Distribution Tracking Screen (app/event-distribution-tracking.tsx)
-- [x] Create Event Completion Screen (app/event-completion.tsx)
-- [x] Create NGO Reports Screen (app/ngo-reports.tsx)
-- [x] Create NGO Profile Screen (app/ngo-profile.tsx)
+## Step 1
+Fix root `Helping-Hand/tsconfig.json` which currently extends `./node_modules/expo/tsconfig.base.json`.
 
-## Admin Side Screens
-- [x] Create Admin Login Screen (app/admin-login.tsx)
-- [x] Create Admin Dashboard (app/admin-dashboard.tsx)
-- [x] Create User Management Screen (app/user-management.tsx)
-- [x] Create Donation Monitoring Screen (app/donation-monitoring.tsx)
-- [x] Create Report Handling Screen (app/report-handling.tsx)
-- [x] Create Analytics and Reports Screen (app/analytics-reports.tsx)
+## Step 2
+Validate:
+- Run `cd Helping-Hand/helping-hand && npm install`
+- Run `cd Helping-Hand && npx tsc --noEmit` or `npm run lint` (whichever is applicable)
+

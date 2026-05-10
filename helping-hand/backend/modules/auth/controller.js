@@ -9,23 +9,45 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 function signToken(user) {
   if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
 
-  return jwt.sign(
-    { sub: String(user._id), role: user.role, email: user.email },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+  return jwt.sign({ id: String(user._id), role: user.role }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
 }
 
-exports.signup = async (req, res) => {
+function safeUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    profilePicture: user.profilePicture,
+    isVerified: user.isVerified,
+    isBlocked: user.isBlocked,
+    bio: user.bio,
+    address: user.address,
+    city: user.city,
+    location: user.location,
+    ratingAvg: user.ratingAvg,
+    totalDonations: user.totalDonations,
+    totalReceived: user.totalReceived,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+exports.register = async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
 
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ message: "name, email, password, role are required" });
+    if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "name, email and password are required" });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
-    if (existing) return res.status(409).json({ message: "Email already in use" });
+    if (existing) return res.status(409).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -39,12 +61,9 @@ exports.signup = async (req, res) => {
 
     const token = signToken(user);
 
-    res.status(201).json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl },
-    });
+    return res.status(201).json({ token, user: safeUser(user) });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -53,40 +72,111 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "email and password are required" });
     }
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
-    if (!user.isActive) return res.status(403).json({ message: "Account is deactivated" });
+    if (user.isBlocked) return res.status(403).json({ message: "Account is blocked" });
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
     const token = signToken(user);
 
-    res.json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl },
-    });
+    return res.json({ token, user: safeUser(user) });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
-exports.me = async (req, res) => {
+exports.forgotPassword = async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const { email } = req.body;
 
-    const user = await User.findById(userId);
+    if (!email) return res.status(400).json({ message: "email is required" });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl },
-    });
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.otp = String(otp);
+    user.otpExpiry = otpExpiry;
+
+    await user.save();
+
+    // Testing: return OTP in response
+    return res.json({ message: "OTP generated", otp, otpExpiry });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "email and otp are required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const now = Date.now();
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(400).json({ message: "OTP not set" });
+    }
+
+    const isOtpMatch = String(user.otp) === String(otp);
+    const isNotExpired = user.otpExpiry.getTime() > now;
+
+    if (!isOtpMatch) return res.status(400).json({ message: "Invalid OTP" });
+    if (!isNotExpired) return res.status(400).json({ message: "OTP expired" });
+
+    return res.json({ message: "OTP verified" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "email, otp and newPassword are required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(400).json({ message: "OTP not set" });
+    }
+
+    const isOtpMatch = String(user.otp) === String(otp);
+    const isNotExpired = user.otpExpiry.getTime() > Date.now();
+
+    if (!isOtpMatch) return res.status(400).json({ message: "Invalid OTP" });
+    if (!isNotExpired) return res.status(400).json({ message: "OTP expired" });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+
+    // clear otp fields
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+
+    await user.save();
+
+    return res.json({ message: "Password reset successful" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
