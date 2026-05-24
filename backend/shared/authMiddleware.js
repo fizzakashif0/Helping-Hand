@@ -85,4 +85,25 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  // Minimal placeholder: current codebase uses authMiddleware for userId attachment.
+  // If/when JWT verification is added, replace this implementation.
+  return next();
+}
+
+function requireRole(/* roles */) {
+  return (req, res, next) => {
+    return next();
+  };
+}
+
 module.exports = authMiddleware;
+module.exports.verifyJWT = verifyJWT;
+module.exports.verifyToken = verifyJWT;
+module.exports.requireRole = requireRole;
+
+

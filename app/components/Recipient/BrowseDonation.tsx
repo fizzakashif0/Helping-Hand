@@ -16,8 +16,8 @@ import {
 import { timeAgo } from "../../lib/timeAgo";
 import {
   DonationRecord,
-  fetchBrowseDonationsDetached,
   fetchAvailableDonationsDetached,
+  fetchBrowseDonationsDetached,
 } from "../../store/donationStore";
 
 interface BrowseDonationsProps {

@@ -1,5 +1,4 @@
 import { buildApiUrl } from "../lib/api";
-import { apiFetch } from "../lib/apiClient";
 import { fromBackendDonationType } from "../lib/donations";
 
 export type DonationRecord = {
@@ -226,3 +225,24 @@ export function subscribe(cb: Subscriber) {
     if (idx >= 0) subscribers.splice(idx, 1);
   };
 }
+
+async function apiFetch(endpoint: string, params?: Record<string, string | number | boolean | undefined>) {
+  const url = buildApiUrl(endpoint);
+  const query = params
+    ? Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+        .join("&")
+    : "";
+
+  const requestUrl = query ? `${url}?${query}` : url;
+
+  return fetch(requestUrl, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    credentials: "same-origin",
+  });
+}
+
