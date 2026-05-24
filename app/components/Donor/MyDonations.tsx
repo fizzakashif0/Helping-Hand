@@ -15,13 +15,13 @@ import {
 } from "react-native";
 
 import { DEMO_DONOR_ID } from "../../lib/donations";
-import { DonationRecord, fetchUserDonations, getDonations, subscribe } from "../../store/donationStore";
 import {
   DonationRequestRecord,
   fetchIncomingDonationRequests,
   subscribeIncomingDonationRequests,
   updateDonationRequestStatusApi,
 } from "../../store/donationRequestStore";
+import { DonationRecord, fetchUserDonations, getDonations, subscribe } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
 const typeConfig = {
@@ -209,9 +209,9 @@ export default function MyDonations() {
           ) : incoming.length > 0 ? (
             incoming.map((req) => (
               <View key={req.id} style={styles.card}>
-                <Text style={styles.title}>{req.donationTitle}</Text>
+                <Text style={styles.title}>{req.title}</Text>
                 <Text style={styles.subText}>
-                  From: {req.recipientDisplayName || req.recipientName || "Recipient"}
+                  From: {req.recipientName || "Recipient"}
                 </Text>
                 <Text style={styles.subText}>Status: {req.status}</Text>
                 {req.status === "pending" ? (
