@@ -34,17 +34,23 @@ app.use((req, res, next) => {
 const authMiddleware = require("./shared/authMiddleware");
 app.use(authMiddleware);
 
+const authRoutes = require("./modules/auth/routes");
 const donationRoutes = require("./modules/donations/routes");
 const requestRoutes = require("./modules/requests/routes");
 const donationRequestRoutes = require("./modules/donationRequests/routes");
 const notificationRoutes = require("./modules/notifications/routes");
 const homeRoutes = require("./modules/home/routes");
+const usersRoutes = require("./modules/users/routes");
 
+app.use("/api/auth", authRoutes);
 app.use("/api/home", homeRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/donations", donationRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/donation-requests", donationRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`server is running on port ${PORT}`));

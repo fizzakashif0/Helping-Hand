@@ -9,10 +9,6 @@ router.post("/login", authController.login);
 
 router.get("/me", verifyJWT, authController.me);
 
-// Example role-guard endpoint
-router.get("/admin-only", verifyJWT, requireRole(["admin"]), (req, res) => {
-  res.json({ ok: true, role: req.user.role });
-});
-
 module.exports = router;
+
 

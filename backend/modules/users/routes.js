@@ -2,11 +2,17 @@ const express = require("express");
 const router = express.Router();
 
 const usersController = require("./controller");
-const { verifyJWT, requireRole } = require("../../shared/authMiddleware");
+const { verifyToken } = require("../../shared/authMiddleware");
 
-router.get("/:userId", verifyJWT, requireRole(["admin", "ngo", "donor", "recipient"]), usersController.getUserById);
+// My profile (protected)
+router.get("/profile", verifyToken, usersController.getMyProfile);
+router.put("/profile", verifyToken, usersController.updateProfile);
+router.post("/profile/picture", verifyToken, usersController.uploadProfilePicture);
 
-router.put("/me", verifyJWT, usersController.updateMe);
+// Public profile (still protected as requested)
+router.get("/:id", verifyToken, usersController.getPublicProfile);
 
 module.exports = router;
+
+
 
