@@ -2,6 +2,7 @@ const Request = require("./model");
 const Donation = require("../donations/model");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const { setLocationGeoFromBody, calculateDistanceKm, DEFAULT_BROWSE_RADIUS_KM } = require("../../shared/geospatial");
 
 // Helper function to convert string IDs to valid MongoDB ObjectIds
 function convertToObjectId(stringId) {
@@ -16,28 +17,6 @@ function convertToObjectId(stringId) {
   return hash;
 }
 
-const DEFAULT_BROWSE_RADIUS_KM = 50;
-
-function toRadians(value) {
-  return (value * Math.PI) / 180;
-}
-
-function calculateDistanceKm(fromLat, fromLng, toLat, toLng) {
-  const earthRadiusKm = 6371;
-  const latDistance = toRadians(toLat - fromLat);
-  const lngDistance = toRadians(toLng - fromLng);
-
-  const a =
-    Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
-    Math.cos(toRadians(fromLat)) *
-      Math.cos(toRadians(toLat)) *
-      Math.sin(lngDistance / 2) *
-      Math.sin(lngDistance / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadiusKm * c;
-}
-
 // Create a new help request
 exports.createRequest = async (req, res) => {
   try {
@@ -45,13 +24,23 @@ exports.createRequest = async (req, res) => {
     const requesterId = body.userId || body.requester;
     const validRequesterId = convertToObjectId(requesterId);
 
+    const loc = body.location || {};
+    const locationGeo = setLocationGeoFromBody(loc);
+
     const requestData = {
       requester: validRequesterId,
       postType: "request",
       type: body.type,
       message: body.message || body.description,
       quantityText: body.quantityText || body.quantity || "Not specified",
-      location: body.location,
+      location: {
+        landmark: loc.landmark,
+        areaName: loc.areaName,
+        fullAddress: loc.fullAddress,
+        address: loc.address || loc.fullAddress,
+        coordinates: loc.coordinates,
+      },
+      locationGeo,
       urgency: body.urgency || "low",
       status: "pending",
     };
@@ -104,27 +93,60 @@ exports.getNearbyRequests = async (req, res) => {
 
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
-    const maxDistanceKm = parseFloat(radius) || DEFAULT_BROWSE_RADIUS_KM;
+    const maxKm = parseFloat(radius) || DEFAULT_BROWSE_RADIUS_KM;
+    const maxMeters = maxKm * 1000;
 
     if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
       return res.status(400).json({ message: "lat and lng must be valid numbers" });
     }
 
+    try {
+      // Try $geoNear aggregation first (efficient with geospatial index)
+      const geoResults = await Request.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: [longitude, latitude] },
+            distanceField: "distance",
+            maxDistance: maxMeters,
+            spherical: true,
+            query: {
+              postType: "request",
+              status: "pending",
+              "locationGeo.coordinates.0": { $exists: true },
+            },
+          },
+        },
+        { $sort: { distance: 1 } },
+      ]);
+
+      if (geoResults.length > 0) {
+        return res.json(geoResults.map((r) => ({
+          ...r,
+          distanceKm: r.distance / 1000,
+        })));
+      }
+    } catch (err) {
+      console.warn("Request $geoNear failed, using legacy distance filter:", err.message);
+    }
+
+    // Fallback: manual filtering for requests without locationGeo
     const allRequests = await Request.find({ postType: "request", status: "pending" })
       .populate("requester", "name email phone")
       .sort({ createdAt: -1 });
 
-    const nearbyRequests = allRequests.filter((request) => {
-      const requestLat = request.location?.coordinates?.lat;
-      const requestLng = request.location?.coordinates?.lng;
-
-      if (typeof requestLat !== "number" || typeof requestLng !== "number") {
-        return false;
-      }
-
-      const distanceKm = calculateDistanceKm(latitude, longitude, requestLat, requestLng);
-      return distanceKm <= maxDistanceKm;
-    });
+    const nearbyRequests = allRequests
+      .map((request) => {
+        const requestLat = request.location?.coordinates?.lat;
+        const requestLng = request.location?.coordinates?.lng;
+        if (typeof requestLat !== "number" || typeof requestLng !== "number") return null;
+        
+        const distanceKm = calculateDistanceKm(latitude, longitude, requestLat, requestLng);
+        if (distanceKm > maxKm) return null;
+        
+        return { ...request.toObject(), distanceKm };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
 
     res.json(nearbyRequests);
   } catch (error) {

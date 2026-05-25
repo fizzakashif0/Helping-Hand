@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -8,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { buildLocationLabelsFromGeocode } from "../../lib/locationFormat";
+import { getCurrentLocationWithAddress } from "../../lib/locationService";
 import MapLocationPickerModal, { MapPickedLocation } from "./MapLocationPickerModal";
 
 export type SelectedPickupLocation = {
@@ -41,29 +40,19 @@ export default function LocationPicker({ onLocationSelect }: Props) {
     setLoading(true);
     setError("");
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("Location permission denied");
+      const result = await getCurrentLocationWithAddress();
+      if (!result) {
+        setError("Failed to get location. Check permissions.");
         setLoading(false);
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      const coords = currentLocation.coords;
-
-      const [place] = await Location.reverseGeocodeAsync({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      });
-
-      const labels = buildLocationLabelsFromGeocode(place);
-
       const locationData: SelectedPickupLocation = {
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        landmark: labels.landmark,
-        areaName: labels.areaName,
-        fullAddress: labels.fullAddress || labels.areaName,
+        latitude: result.coordinates.latitude,
+        longitude: result.coordinates.longitude,
+        landmark: result.geocode.landmark,
+        areaName: result.geocode.areaName,
+        fullAddress: result.geocode.fullAddress,
       };
 
       applySelection(locationData);

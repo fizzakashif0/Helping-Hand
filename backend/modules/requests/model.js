@@ -32,11 +32,30 @@ const requestSchema = new mongoose.Schema({
   },
 
   location: {
+    /** Short label shown to recipients (with distance only) */
+    landmark: String,
+    /** Broader area (district / city line) — stored, not sent on public API */
+    areaName: String,
+    /** Optional full address for internal use */
+    fullAddress: String,
+    /** Legacy / compatibility */
     address: String,
     coordinates: {
       lat: Number,
       lng: Number
     }
+  },
+
+  /** GeoJSON for MongoDB 2dsphere queries — not exposed on public API */
+  locationGeo: {
+    type: {
+      type: String,
+      enum: ["Point"],
+    },
+    coordinates: {
+      type: [Number],
+      default: undefined,
+    },
   },
 
   urgency: {
@@ -56,5 +75,8 @@ const requestSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Index for geospatial queries
+requestSchema.index({ locationGeo: "2dsphere" }, { sparse: true });
 
 module.exports = mongoose.model("Request", requestSchema);

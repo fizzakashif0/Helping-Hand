@@ -1,6 +1,7 @@
 const Donation = require("./model");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const { setLocationGeoFromBody, calculateDistanceKm, DEFAULT_BROWSE_RADIUS_KM } = require("../../shared/geospatial");
 
 function convertToObjectId(stringId) {
   if (!stringId) return null;
@@ -11,40 +12,6 @@ function convertToObjectId(stringId) {
 
   const hash = crypto.createHash("md5").update(stringId).digest("hex").substring(0, 24);
   return hash;
-}
-
-const DEFAULT_BROWSE_RADIUS_KM = 50;
-
-function toRadians(value) {
-  return (value * Math.PI) / 180;
-}
-
-function calculateDistanceKm(fromLat, fromLng, toLat, toLng) {
-  const earthRadiusKm = 6371;
-  const latDistance = toRadians(toLat - fromLat);
-  const lngDistance = toRadians(toLng - fromLng);
-
-  const a =
-    Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
-    Math.cos(toRadians(fromLat)) *
-      Math.cos(toRadians(toLat)) *
-      Math.sin(lngDistance / 2) *
-      Math.sin(lngDistance / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadiusKm * c;
-}
-
-function setLocationGeoFromBody(location) {
-  if (!location || !location.coordinates) return undefined;
-  const lat = location.coordinates.lat;
-  const lng = location.coordinates.lng;
-  if (typeof lat !== "number" || typeof lng !== "number") return undefined;
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return undefined;
-  return {
-    type: "Point",
-    coordinates: [lng, lat],
-  };
 }
 
 function toPublicDonation(doc, distanceKm) {

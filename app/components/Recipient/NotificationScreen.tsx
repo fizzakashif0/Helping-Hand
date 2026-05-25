@@ -1,10 +1,10 @@
+import { useRouter } from "expo-router";
 import {
   Calendar,
   CheckCircle,
   Gift,
   MessageCircle,
 } from "lucide-react-native";
-import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -63,20 +63,20 @@ export function RecipientNotifications({
 
   const openNotification = async (n: AppNotification) => {
     try {
-      await markNotificationRead(DEMO_REQUESTER_ID, n._id);
+      await markNotificationRead(DEMO_REQUESTER_ID, n.id);
       setItems((prev) =>
-        prev.map((x) => (x._id === n._id ? { ...x, isRead: true } : x))
+        prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x))
       );
     } catch {
       /* ignore */
     }
 
     if (n.relatedDonationId) {
-      router.push(`/recipient-donation/${n.relatedDonationId}`);
+      onNavigate("browse-donations");
       return;
     }
     if (n.type === "DONATION_REQUEST_STATUS") {
-      router.push("/my-requests");
+      onNavigate("my-requests");
       return;
     }
     onNavigate("browse-donations");
@@ -108,7 +108,7 @@ export function RecipientNotifications({
             const { Icon, color, bgColor } = iconMetaForType(item.type);
             return (
               <TouchableOpacity
-                key={item._id}
+                key={item.id}
                 style={[styles.card, !item.isRead && styles.unreadCard]}
                 onPress={() => openNotification(item)}
               >

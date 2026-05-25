@@ -1,3 +1,4 @@
+import { SelectedPickupLocation } from "../components/common/LocationPicker";
 import { buildApiUrl } from "../lib/api";
 import { fromBackendDonationType } from "../lib/donations";
 
@@ -142,10 +143,26 @@ export async function createRequest(requestData: {
   title?: string;
   description: string;
   quantity?: string;
-  location?: string;
+  location?: SelectedPickupLocation | null;
   urgency?: "low" | "medium" | "high";
 }) {
   try {
+    const locationPayload: any = {
+      address: "Not specified",
+    };
+
+    // If location is provided with coordinates, include full location object
+    if (requestData.location?.latitude !== undefined && requestData.location?.longitude !== undefined) {
+      locationPayload.landmark = requestData.location.landmark;
+      locationPayload.areaName = requestData.location.areaName;
+      locationPayload.fullAddress = requestData.location.fullAddress;
+      locationPayload.address = requestData.location.fullAddress || requestData.location.areaName;
+      locationPayload.coordinates = {
+        lat: requestData.location.latitude,
+        lng: requestData.location.longitude,
+      };
+    }
+
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -156,9 +173,7 @@ export async function createRequest(requestData: {
         type: requestData.type === "financial" ? "money" : requestData.type,
         message: requestData.description,
         quantityText: requestData.quantity || "Not specified",
-        location: {
-          address: requestData.location || "Not specified",
-        },
+        location: locationPayload,
         urgency: requestData.urgency || "medium",
       }),
     });

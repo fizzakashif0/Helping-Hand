@@ -1,19 +1,19 @@
 
 import { useRouter } from "expo-router";
 import {
-  ArrowRight,
-  Bell,
-  Heart,
-  MapPin,
-  TrendingUp
+    ArrowRight,
+    Bell,
+    Heart,
+    MapPin,
+    TrendingUp
 } from "lucide-react-native";
 import { useState } from "react";
 import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import styles from "../../styles/MainStyle";
 import BottomNav, { NavItem } from "../Navbar";
@@ -117,7 +117,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
 
       {/* NGO Events */}
       <SectionHeader
-        title="Active NGO Events"
+        title="vents"
         onPress={() => onNavigate("ngo-events")}
       />
 

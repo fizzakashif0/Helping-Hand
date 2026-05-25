@@ -2,6 +2,7 @@ import { buildApiUrl } from "../lib/api";
 
 export type DonationRequestRecord = {
   id: string;
+  title?: string;
   donationTitle?: string;
   message?: string;
 
