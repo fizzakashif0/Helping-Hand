@@ -1,15 +1,15 @@
 import {
-    Clock,
-    Heart,
-    MapPin,
-    MessageCircle,
-    Share2
+  Clock,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Share2
 } from "lucide-react-native";
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 export type DonationType = "clothes" | "food" | "blood" | "financial";

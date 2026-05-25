@@ -114,33 +114,32 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
             onChangeText={setSearchQuery}
           />
         </View>
-      </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => setSelectedCategory(cat)}
-            style={[
-              styles.categoryChip,
-              selectedCategory === cat && styles.categoryActive,
-            ]}
-          >
-            <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setSelectedCategory(cat)}
               style={[
-                styles.categoryText,
-                selectedCategory === cat && styles.categoryTextActive,
+                styles.categoryChip,
+                selectedCategory === cat && styles.categoryActive,
               ]}
             >
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === cat && styles.categoryTextActive,
+                ]}
+              >
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1A5F7A" />
           <Text style={styles.loadingText}>Finding help near you…</Text>
         </View>
       ) : (
@@ -156,47 +155,46 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
               style={styles.card}
               onPress={() => router.push(`/recipient-donation/${item.id}`)}
             >
-              <View style={styles.cardHeader}>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
-                ) : (
-                  <Text style={styles.emoji}>{typeEmoji[item.type] || "📦"}</Text>
-                )}
+              <View style={styles.badgeRow}>
+                <View
+                  style={[
+                    styles.badge,
+                    item.type === "food"
+                      ? styles.typeFood
+                      : item.type === "clothes"
+                      ? styles.typeClothes
+                      : item.type === "blood"
+                      ? styles.typeBlood
+                      : styles.typeFinancial,
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{typeLabel(item.type)}</Text>
+                </View>
+              </View>
 
-                <View style={{ flex: 1 }}>
-                  <View style={styles.badgeRow}>
-                    <Text style={styles.badge}>{typeLabel(item.type)}</Text>
-                  </View>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardDesc} numberOfLines={2}>
+                {item.shortDescription || item.title}
+              </Text>
 
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <Text style={styles.cardDesc} numberOfLines={2}>
-                    {item.shortDescription || item.title}
+              <View style={styles.metaRow}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="location-outline" size={14} color="#6B7280" />
+                  <Text style={styles.metaText}>{item.location}</Text>
+                </View>
+
+                <View style={styles.metaItem}>
+                  <Ionicons name="time-outline" size={14} color="#6B7280" />
+                  <Text style={styles.metaText}>
+                    {timeAgo(item.postedAtIso || item.date)}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={16} color="#1A5F7A" />
-                <Text style={styles.infoText}>
-                  {item.location}
-                  {item.distanceKm != null ? ` · ${item.distanceKm} km` : ""}
+              <View style={styles.actionsRow}>
+                <Text style={styles.distanceText}>
+                  {item.distanceKm != null ? `${item.distanceKm.toFixed(1)} km away` : ""}
                 </Text>
-              </View>
-
-              <View style={styles.infoBetween}>
-                <Text style={styles.label}>Quantity</Text>
-                <Text>{item.amount || "—"}</Text>
-              </View>
-
-              <View style={styles.infoBetween}>
-                <Text style={styles.label}>Posted</Text>
-                <Text style={{ color: "green" }}>
-                  {timeAgo(item.postedAtIso || item.date)}
-                </Text>
-              </View>
-
-              <View style={styles.footer}>
-                <Text style={styles.donor}>Nearby listing</Text>
                 <TouchableOpacity
                   style={styles.requestBtn}
                   onPress={() => router.push(`/recipient-donation/${item.id}`)}
@@ -215,12 +213,13 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#0E4A61",
   },
   header: {
     backgroundColor: "#1A5F7A",
-    padding: 20,
-    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    paddingBottom: 16,
   },
   backBtn: {
     flexDirection: "row",
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     flexDirection: "row",
-    backgroundColor: "#ffffff20",
+    backgroundColor: "rgba(255,255,255,0.2)",
     padding: 10,
     borderRadius: 10,
     alignItems: "center",
@@ -258,95 +257,80 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categories: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: "#fff",
+    marginTop: 8,
   },
   categoryChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginRight: 8,
   },
   categoryActive: {
-    backgroundColor: "#1A5F7A",
+    backgroundColor: "#fff",
   },
   categoryText: {
-    color: "#555",
-  },
-  categoryTextActive: {
     color: "#fff",
   },
+  categoryTextActive: {
+    color: "#1A5F7A",
+  },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  thumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-  },
-  emoji: {
-    fontSize: 36,
+    elevation: 3,
   },
   badgeRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   badge: {
-    backgroundColor: "#e0f2f1",
-    color: "#00695c",
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  verified: {
-    color: "green",
+  badgeText: {
+    color: "#FFFFFF",
     fontSize: 12,
+    fontWeight: "600",
   },
   cardTitle: {
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 2,
+    color: "#111827",
+    marginBottom: 4,
   },
   cardDesc: {
-    color: "#666",
     fontSize: 13,
+    color: "#374151",
   },
-  infoRow: {
+  metaRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginVertical: 10,
+  },
+  metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
     gap: 4,
   },
-  infoText: {
-    color: "#555",
-    fontSize: 13,
+  metaText: {
+    fontSize: 12,
+    color: "#6B7280",
   },
-  infoBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  label: {
-    color: "#888",
-  },
-  footer: {
+  actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 10,
   },
-  donor: {
-    color: "#555",
+  distanceText: {
+    color: "#6B7280",
     fontSize: 12,
   },
   requestBtn: {
@@ -359,16 +343,20 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   loadingBox: {
-    padding: 40,
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
   loadingText: {
-    marginTop: 12,
-    color: "#666",
+    color: "#fff",
   },
   emptyList: {
     textAlign: "center",
-    color: "#888",
+    color: "#fff",
     marginTop: 24,
   },
+  typeFood: { backgroundColor: "#22C55E" },
+  typeClothes: { backgroundColor: "#3B82F6" },
+  typeBlood: { backgroundColor: "#B91C1C" },
+  typeFinancial: { backgroundColor: "#F59E0B" },
 });
