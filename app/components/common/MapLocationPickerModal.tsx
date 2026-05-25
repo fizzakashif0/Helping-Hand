@@ -1,29 +1,42 @@
-import { MapPin, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { MapPin, Search, X } from "lucide-react-native";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { reverseGeocodeNominatim } from "../../lib/locationService";
+
+const WebLeafletMap = lazy(() => import("./WebLeafletMap.web"));
 
 // Only import MapView on native platforms
 let MapView: any = null;
 let Marker: any = null;
-let PROVIDER_GOOGLE: any = null;
+let UrlTile: any = null;
+let mapAvailable = false;
 
 if (Platform.OS !== "web") {
   try {
     const maps = require("react-native-maps");
     MapView = maps.default;
     Marker = maps.Marker;
-    PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+    UrlTile = maps.UrlTile;
+    mapAvailable = true;
+    console.log("react-native-maps loaded successfully", {
+      MapViewExists: !!MapView,
+      MarkerExists: !!Marker,
+      UrlTileExists: !!UrlTile,
+    });
   } catch (e) {
-    console.warn("react-native-maps not available");
+    console.error("react-native-maps import failed:", e);
+    mapAvailable = false;
   }
 }
 
@@ -55,6 +68,9 @@ export default function MapLocationPickerModal({
     longitude: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
   const [region, setRegion] = useState({
     latitude: initialLatitude || 31.5204,
     longitude: initialLongitude || 74.3587,
@@ -63,7 +79,7 @@ export default function MapLocationPickerModal({
   });
 
   useEffect(() => {
-    if (initialLatitude && initialLongitude) {
+    if (initialLatitude != null && initialLongitude != null) {
       setRegion({
         latitude: initialLatitude,
         longitude: initialLongitude,
@@ -76,6 +92,48 @@ export default function MapLocationPickerModal({
       });
     }
   }, [initialLatitude, initialLongitude, visible]);
+
+  const searchNominatim = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        query
+      )}&format=json&limit=5`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+
+      const results = await response.json();
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSearchResultSelect = (result: any) => {
+    const lat = parseFloat(result.lat);
+    const lon = parseFloat(result.lon);
+
+    setSelectedLocation({ latitude: lat, longitude: lon });
+    setRegion({
+      latitude: lat,
+      longitude: lon,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+    setSearchResults([]);
+    setSearchQuery("");
+  };
 
   const handleMapPress = (e: any) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
@@ -97,7 +155,7 @@ export default function MapLocationPickerModal({
         longitude: selectedLocation.longitude,
         landmark: geocode?.landmark || "Selected Location",
         areaName: geocode?.areaName || "Selected Area",
-        fullAddress: geocode?.fullAddress || `${selectedLocation.latitude}, ${selectedLocation.longitude}`,
+        fullAddress: geocode?.fullAddress || "Unknown Location",
       };
 
       onConfirm(locationData);
@@ -110,7 +168,7 @@ export default function MapLocationPickerModal({
         longitude: selectedLocation.longitude,
         landmark: "Selected Location",
         areaName: "Selected Area",
-        fullAddress: `${selectedLocation.latitude}, ${selectedLocation.longitude}`,
+        fullAddress: "Unknown Location",
       };
       onConfirm(locationData);
       onClose();
@@ -131,41 +189,216 @@ export default function MapLocationPickerModal({
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Map or Fallback */}
-        {MapView && Platform.OS !== "web" ? (
-          <>
-            <MapView
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              region={region}
-              onRegionChange={setRegion}
-              onPress={handleMapPress}
-            >
-              {selectedLocation && (
-                <Marker
-                  coordinate={{
-                    latitude: selectedLocation.latitude,
-                    longitude: selectedLocation.longitude,
-                  }}
-                  title="Selected Location"
-                  description="Your pickup location"
-                />
-              )}
-            </MapView>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Search size={20} color="#666" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search places, areas, streets..."
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              searchNominatim(text);
+            }}
+            placeholderTextColor="#999"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => {
+              setSearchQuery("");
+              setSearchResults([]);
+            }}>
+              <X size={20} color="#666" />
+            </TouchableOpacity>
+          ) : searching ? (
+            <ActivityIndicator size="small" color="#666" />
+          ) : null}
+        </View>
 
-            {/* Center Marker Icon */}
-            <View style={styles.centerMarker}>
-              <MapPin size={32} color="#1A5F7A" fill="#1A5F7A" />
-            </View>
-          </>
-        ) : (
-          <View style={[styles.map, styles.fallback]}>
-            <Text style={styles.fallbackText}>Map not available</Text>
-            <Text style={styles.fallbackSubText}>
-              Using GPS location or manual entry
-            </Text>
+        {/* Search Results Dropdown */}
+        {searchResults.length > 0 && (
+          <View style={styles.searchResultsContainer}>
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item, index) => `${item.place_id}_${index}`}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.searchResultItem}
+                  onPress={() => handleSearchResultSelect(item)}
+                >
+                  <MapPin size={16} color="#1A5F7A" style={{ marginRight: 8 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.searchResultName} numberOfLines={1}>
+                      {item.name || item.display_name}
+                    </Text>
+                    <Text style={styles.searchResultDetails} numberOfLines={1}>
+                      {item.display_name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={false}
+              nestedScrollEnabled={true}
+            />
           </View>
         )}
+
+        {/* Map or Fallback */}
+        {(() => {
+          const debugInfo = {
+            mapAvailable,
+            MapViewExists: !!MapView,
+            UrlTileExists: !!UrlTile,
+            platform: Platform.OS,
+            platformCheck: Platform.OS !== "web",
+          };
+          console.log("MapPicker render check:", debugInfo);
+          
+          // Try to render map if MapView is available (don't require UrlTile)
+          const shouldRenderMap = mapAvailable && MapView && Platform.OS !== "web";
+          console.log(`shouldRenderMap: ${shouldRenderMap}`);
+
+          if (Platform.OS === "web") {
+            return (
+              <Suspense fallback={<View style={styles.map} />}>
+                <WebLeafletMap
+                  region={region}
+                  selectedLocation={selectedLocation}
+                  onSelectLocation={setSelectedLocation}
+                  onRegionChange={(next) =>
+                    setRegion((prev) => ({
+                      ...prev,
+                      latitude: next.latitude,
+                      longitude: next.longitude,
+                    }))
+                  }
+                />
+              </Suspense>
+            );
+          }
+          
+          if (shouldRenderMap) {
+            try {
+              return (
+                <>
+                  <MapView
+                    style={styles.map}
+                    region={region}
+                    onRegionChange={setRegion}
+                    onPress={handleMapPress}
+                    zoomEnabled={true}
+                    scrollEnabled={true}
+                  >
+                    {/* OpenStreetMap tiles layer */}
+                    {UrlTile && (
+                      <UrlTile
+                        urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        maximumZ={19}
+                      />
+                    )}
+                    
+                    {selectedLocation && (
+                      <Marker
+                        coordinate={{
+                          latitude: selectedLocation.latitude,
+                          longitude: selectedLocation.longitude,
+                        }}
+                        title="Selected Location"
+                        description="Tap to move or drag marker"
+                        draggable={true}
+                        onDragEnd={(e:any) => {
+                          const { latitude, longitude } = e.nativeEvent.coordinate;
+                          setSelectedLocation({ latitude, longitude });
+                        }}
+                      />
+                    )}
+                  </MapView>
+
+                  {/* Center Marker Icon */}
+                  <View style={styles.centerMarker}>
+                    <MapPin size={32} color="#1A5F7A" fill="#1A5F7A" />
+                  </View>
+                </>
+              );
+            } catch (renderError) {
+              console.error("MapView render error:", renderError);
+              // Fall through to fallback UI
+            }
+          }
+          
+          // Fallback UI
+          return (
+            <View style={[styles.map, styles.fallback]}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ justifyContent: 'center', alignItems: 'center' }}>
+                <MapPin size={48} color="#ccc" style={{ marginBottom: 16 }} />
+                <Text style={styles.fallbackText}>Map Not Available</Text>
+                
+                {/* Debug Information */}
+                <Text style={[styles.fallbackSubText, { marginTop: 16, fontSize: 12, fontFamily: 'monospace' }]}>
+                  Debug Info:
+                </Text>
+                <Text style={[styles.fallbackSubText, { fontSize: 11, fontFamily: 'monospace' }]}>
+                  Platform: {Platform.OS}
+                </Text>
+                <Text style={[styles.fallbackSubText, { fontSize: 11, fontFamily: 'monospace' }]}>
+                  MapView: {MapView ? '✓ loaded' : '✗ not loaded'}
+                </Text>
+                <Text style={[styles.fallbackSubText, { fontSize: 11, fontFamily: 'monospace' }]}>
+                  UrlTile: {UrlTile ? '✓ loaded' : '✗ not loaded'}
+                </Text>
+                <Text style={[styles.fallbackSubText, { fontSize: 11, fontFamily: 'monospace' }]}>
+                  mapAvailable: {mapAvailable ? 'true' : 'false'}
+                </Text>
+                
+                {/* Helpful Messages */}
+                {!mapAvailable && (
+                  <>
+                    <Text style={[styles.fallbackSubText, { marginTop: 16, fontWeight: '600' }]}>
+                      ⚠️ react-native-maps failed to load
+                    </Text>
+                    <Text style={styles.fallbackSubText}>
+                      Check console for error details
+                    </Text>
+                  </>
+                )}
+                
+                {mapAvailable && !MapView && (
+                  <>
+                    <Text style={[styles.fallbackSubText, { marginTop: 16, fontWeight: '600' }]}>
+                      ⚠️ MapView import failed
+                    </Text>
+                    <Text style={styles.fallbackSubText}>
+                      Module loaded but MapView not found
+                    </Text>
+                  </>
+                )}
+                
+                {Platform.OS === "windows" && (
+                  <>
+                    <Text style={[styles.fallbackSubText, { marginTop: 16, fontWeight: '600' }]}>
+                      ⚠️ Web platform detected
+                    </Text>
+                    <Text style={styles.fallbackSubText}>
+                      Maps only work on native (iOS/Android)
+                    </Text>
+                  </>
+                )}
+                
+                {/* General Instructions */}
+                <Text style={[styles.fallbackSubText, { marginTop: 16 }]}>
+                  Use the search bar above to find a location
+                </Text>
+                <Text style={styles.fallbackSubText}>
+                  or manually enter coordinates
+                </Text>
+                {searchResults.length === 0 && searchQuery ? (
+                  <Text style={styles.fallbackSubText}>
+                    Searching "{searchQuery}"...
+                  </Text>
+                ) : null}
+              </ScrollView>
+            </View>
+          );
+        })()}
 
         {/* Bottom Action Panel */}
         <View style={styles.actionPanel}>
@@ -311,5 +544,45 @@ const styles = StyleSheet.create({
   fallbackSubText: {
     fontSize: 14,
     color: "#666",
+  },
+  searchContainer: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchInput: {
+    flex: 1,
+    marginHorizontal: 8,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#333",
+  },
+  searchResultsContainer: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  searchResultName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A5F7A",
+  },
+  searchResultDetails: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 2,
   },
 });

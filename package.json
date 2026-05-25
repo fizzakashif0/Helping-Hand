@@ -18,8 +18,10 @@
     "expo-location": "~55.1.9",
     "expo-router": "^55.0.14",
     "expo-splash-screen": "^55.0.20",
+    "leaflet": "^1.9.4",
     "lucide-react-native": "^0.552.0",
     "react": "^19.2.6",
+    "react-leaflet": "^5.0.0",
     "react-native": "^0.85.3",
     "react-native-maps": "^1.26.20",
     "react-native-reanimated": "4.2.1",
@@ -27,6 +29,7 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@types/react": "~19.2.10",
     "typescript": "~5.9.2"
   }

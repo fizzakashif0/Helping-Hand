@@ -68,6 +68,17 @@ export function CreateDonationForm({
     }
   };
 
+  const handleLocationSelect = (loc: SelectedPickupLocation | null) => {
+    setLocation(loc);
+    if (loc) {
+      // Auto-fill the address field with the full address
+      setFormData({
+        ...formData,
+        location: loc.fullAddress || loc.landmark,
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
@@ -318,7 +329,7 @@ export function CreateDonationForm({
           
           {/* Location Picker */}
           <View style={{ marginTop: 12 }}>
-            <LocationPicker onLocationSelect={setLocation} />
+            <LocationPicker onLocationSelect={handleLocationSelect} />
           </View>
           {location && (
             <Text style={styles.helperText}>

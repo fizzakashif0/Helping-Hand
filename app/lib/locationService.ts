@@ -1,5 +1,4 @@
 import * as Location from "expo-location";
-import { buildLocationLabelsFromGeocode } from "./locationFormat";
 
 export type LocationCoordinates = {
   latitude: number;
@@ -77,38 +76,85 @@ export async function reverseGeocodeNominatim(
 
     const data = await response.json();
 
-    // Parse Nominatim response to our location format
+    // Extract Nominatim's detailed address components
     const address = data.address || {};
-    const geolocation = {
-      city: address.city || address.town || address.village || null,
-      district: address.district || address.county || null,
-      street: address.road || null,
-      name: data.name || null,
-      region: address.state || null,
-      country: address.country || null,
-      postalCode: address.postcode || null,
-      streetNumber: address.house_number || null,
-    };
+    const displayName = data.display_name || "";
 
-    // Use existing location label builder to maintain consistency
-    const labels = buildLocationLabelsFromGeocode(geolocation);
+    // Build readable landmark (closest named place)
+    const landmark = 
+      data.name ||
+      address.road ||
+      address.neighbourhood ||
+      address.suburb ||
+      address.city ||
+      address.town ||
+      address.village ||
+      "Selected Location";
+
+    // Build readable area name (neighborhood/suburb/city)
+    const areaName = 
+      address.neighbourhood ||
+      address.suburb ||
+      address.city ||
+      address.town ||
+      address.village ||
+      address.district ||
+      landmark;
+
+    // Build full readable address from key Nominatim fields.
+    const addressParts = [];
+    
+    if (address.road && address.house_number) {
+      addressParts.push(`${address.house_number} ${address.road}`);
+    } else if (address.road) {
+      addressParts.push(address.road);
+    }
+    
+    if (address.suburb) addressParts.push(address.suburb);
+    if (address.neighbourhood && address.neighbourhood !== address.suburb) {
+      addressParts.push(address.neighbourhood);
+    }
+    if (address.city) addressParts.push(address.city);
+    else if (address.town) addressParts.push(address.town);
+    else if (address.village) addressParts.push(address.village);
+    
+    if (address.postcode) addressParts.push(address.postcode);
+    if (address.state) addressParts.push(address.state);
+
+    const structuredAddress = addressParts.filter(Boolean).join(", ");
+    const readableFallback = [
+      address.road,
+      address.suburb,
+      address.city || address.town || address.village,
+      address.state,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const fullAddress = displayName || structuredAddress || readableFallback || "Unknown Location";
+
+    console.log("🌍 Nominatim Geocoding Result:", {
+      landmark,
+      areaName,
+      fullAddress,
+      displayName,
+    });
 
     return {
-      landmark: labels.landmark,
-      areaName: labels.areaName,
-      fullAddress: labels.fullAddress,
+      landmark,
+      areaName,
+      fullAddress,
     };
   } catch (error) {
     console.error("Error reverse geocoding with Nominatim:", error);
-    // Return fallback with just coordinates
+    // Return fallback with generic message, not coordinates
     return {
-      landmark: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-      areaName: `Location (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`,
-      fullAddress: `${latitude}, ${longitude}`,
+      landmark: "Selected Location",
+      areaName: "Selected Area",
+      fullAddress: "Unknown Location",
     };
   }
 }
-
+ 
 /**
  * Combined: Get current location and reverse geocode it
  * Used for "Use my current location" button
