@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+detoxify
+transformers
+torch
+sentencepiece

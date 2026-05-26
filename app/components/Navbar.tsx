@@ -25,6 +25,7 @@ interface BottomNavProps {
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const router = useRouter();
   const [userRole, setUserRole] = useState<string>(getUserRole() || "donor");
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = subscribeToUserRole((role) => {
@@ -33,12 +34,30 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const userId = "000000000000000000000001";
+        const response = await fetch(
+          `http://localhost:5000/api/chat-requests/pending?userId=${encodeURIComponent(userId)}`
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        setPendingCount(Array.isArray(data) ? data.length : 0);
+      } catch (error) {
+        console.error("Failed to fetch pending request count:", error);
+      }
+    };
+
+    fetchPendingCount();
+  }, []);
+
   // Define navigation items based on user role
   const getDonorNavItems = () => [
     { id: "home" as NavItem, icon: Home, label: "Home", route: "/home" },
     { id: "donations" as NavItem, icon: Heart, label: "My Donations", route: "/donations" },
     { id: "create" as NavItem, icon: PlusCircle, label: "Create", route: "/create" },
-    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat" },
+    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat-list" },
     { id: "profile" as NavItem, icon: User, label: "Profile", route: "/profile" },
   ];
 
@@ -46,7 +65,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: "home" as NavItem, icon: Home, label: "Home", route: "/home" },
     { id: "donations" as NavItem, icon: Heart, label: "My Requests", route: "/my-requests" },
     { id: "create" as NavItem, icon: PlusCircle, label: "Request", route: "/create-help-request" },
-    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat" },
+    { id: "notifications" as NavItem, icon: Bell, label: "Messages", route: "/chat-list" },
     { id: "profile" as NavItem, icon: User, label: "Profile", route: "/profile" },
   ];
 
@@ -68,11 +87,18 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             activeOpacity={0.7}
           >
             {[
-              <Icon
-                key="icon"
-                size={22}
-                color={isActive ? "#dc2626" : "#6b7280"}
-              />,
+              <View key="icon-wrap" style={styles.iconWrap}>
+                <Icon
+                  key="icon"
+                  size={22}
+                  color={isActive ? "#dc2626" : "#6b7280"}
+                />
+                {id === "notifications" && pendingCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{pendingCount}</Text>
+                  </View>
+                ) : null}
+              </View>,
               <Text
                 key="label"
                 style={[
@@ -99,6 +125,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
     paddingVertical: 8,
+  },
+  iconWrap: {
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
   navItem: {
     alignItems: "center",

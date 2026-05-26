@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   ScrollView,
@@ -91,6 +92,32 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 
   const typeLabel = (t: string) =>
     t === "financial" ? "Financial" : t.charAt(0).toUpperCase() + t.slice(1);
+
+  const handleContactDonor = async (item: DonationRecord) => {
+    try {
+      const donorId =
+        (item as any).donorId || (item as any).donor?._id || "000000000000000000000001";
+      const recipientId = "000000000000000000000002";
+      const donationId = item.id;
+
+      const response = await fetch("http://localhost:5000/api/chat-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ donorId, recipientId, donationId }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to send request");
+      }
+
+      Alert.alert("Success", "Request sent to donor");
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to send request");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -195,6 +222,12 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
                 <Text style={styles.distanceText}>
                   {item.distanceKm != null ? `${item.distanceKm.toFixed(1)} km away` : ""}
                 </Text>
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() => handleContactDonor(item)}
+                >
+                  <Text style={styles.contactText}>Contact Donor</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.requestBtn}
                   onPress={() => router.push(`/recipient-donation/${item.id}`)}
@@ -340,6 +373,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   requestText: {
+    color: "#fff",
+  },
+  contactBtn: {
+    backgroundColor: "#0F766E",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  contactText: {
     color: "#fff",
   },
   loadingBox: {

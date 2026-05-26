@@ -6,6 +6,7 @@ import {
   Share2
 } from "lucide-react-native";
 import {
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -41,6 +42,31 @@ const urgencyConfig = {
 };
 
 export function DonationPost({ post }: { post: DonationPostData }) {
+  const handleContactRecipient = async () => {
+    try {
+      const donorId = "000000000000000000000001";
+      const recipientId = "000000000000000000000002";
+      const donationId = post.id;
+
+      const response = await fetch("http://localhost:5000/api/chat-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ donorId, recipientId, donationId }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to send request");
+      }
+
+      Alert.alert("Success", "Request sent");
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to send request");
+    }
+  };
+
   return (
     <View style={styles.card}>
       {/* Header */}
@@ -108,6 +134,10 @@ export function DonationPost({ post }: { post: DonationPostData }) {
 
         <TouchableOpacity style={styles.donateButton}>
           <Text style={styles.donateText}>Donate</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.contactButton} onPress={handleContactRecipient}>
+          <Text style={styles.contactText}>Contact Recipient</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -207,6 +237,19 @@ const styles = StyleSheet.create({
   },
 
   donateText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600"
+  },
+
+  contactButton: {
+    backgroundColor: "#0F766E",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8
+  },
+
+  contactText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600"
