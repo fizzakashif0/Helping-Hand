@@ -1,18 +1,13 @@
-const express = require("express");
+const express = require('express');
+
+const { verifyToken } = require('../../shared/authMiddleware');
+const usersController = require('./controller');
+
 const router = express.Router();
 
-const usersController = require("./controller");
-const { verifyToken } = require("../../shared/authMiddleware");
-
-// My profile (protected)
-router.get("/profile", verifyToken, usersController.getMyProfile);
-router.put("/profile", verifyToken, usersController.updateProfile);
-router.post("/profile/picture", verifyToken, usersController.uploadProfilePicture);
-
-// Public profile (still protected as requested)
-router.get("/:id", verifyToken, usersController.getPublicProfile);
+router.patch('/select-role', verifyToken, usersController.selectRole);
+router.patch('/update-profile', verifyToken, usersController.updateProfile);
+router.get('/profile', verifyToken, usersController.getProfile);
 
 module.exports = router;
-
-
 

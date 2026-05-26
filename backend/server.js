@@ -6,8 +6,9 @@ dotenv.config();
 const app = express();
 connectDB();
 
-/** Ensure User model is registered before any populate("recipient"|"donor") runs */
-require("./modules/users/model");
+// Ensure auth model is registered
+require("./modules/auth/model");
+
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -31,8 +32,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const authMiddleware = require("./shared/authMiddleware");
-app.use(authMiddleware);
+// JWT verification is applied only on protected routes (in routers)
+
 
 const authRoutes = require("./modules/auth/routes");
 const donationRoutes = require("./modules/donations/routes");
@@ -43,12 +44,14 @@ const homeRoutes = require("./modules/home/routes");
 const usersRoutes = require("./modules/users/routes");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/home", homeRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/donations", donationRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/donation-requests", donationRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/home", homeRoutes);
+
+
 
 
 
