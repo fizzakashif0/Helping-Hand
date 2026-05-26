@@ -42,6 +42,9 @@ const donationRequestRoutes = require("./modules/donationRequests/routes");
 const notificationRoutes = require("./modules/notifications/routes");
 const homeRoutes = require("./modules/home/routes");
 const usersRoutes = require("./modules/users/routes");
+const chatRoutes = require("./modules/chats/routes");
+const messageRoutes = require("./modules/messages/routes");
+const chatRequestRoutes = require("./modules/chatRequests/routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
@@ -52,8 +55,17 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/home", homeRoutes);
 
 
+app.use("/api/chats", chatRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/chat-requests", chatRequestRoutes);
 
 
+
+const http = require("http");
+const initializeSocket = require("./socket");
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`server is running on port ${PORT}`));
+const server = http.createServer(app);
+initializeSocket(server);
+
+server.listen(PORT, () => console.log(`server is running on port ${PORT}`));
