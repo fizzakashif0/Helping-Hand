@@ -48,7 +48,10 @@ export default function WebLeafletMap({
     let mounted = true;
 
     const loadModules = async () => {
+      // Suppress TS errors when types for these packages are not available in the project
+      // @ts-ignore
       const L = await import("leaflet");
+      // @ts-ignore
       const RL = await import("react-leaflet");
 
       delete (L.default.Icon.Default.prototype as any)._getIconUrl;
