@@ -245,4 +245,6 @@ async function apiFetch(endpoint: string, params?: Record<string, string | numbe
     credentials: "same-origin",
   });
 }
+export default {};
+
 

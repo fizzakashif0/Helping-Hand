@@ -201,4 +201,5 @@ export async function updateDonationRequestStatusApi(input: {
     return { ok: true, optimistic: true };
   }
 }
+export default {};
 

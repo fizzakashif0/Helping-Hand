@@ -150,3 +150,5 @@ export function subscribeToNotifications(cb: Subscriber) {
     if (idx >= 0) subscribers.splice(idx, 1);
   };
 }
+export default {};
+

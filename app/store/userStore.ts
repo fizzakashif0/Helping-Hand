@@ -21,3 +21,5 @@ export function subscribeToUserRole(fn: Subscriber): () => void {
     if (idx >= 0) subscribers.splice(idx, 1);
   };
 }
+export default {};
+

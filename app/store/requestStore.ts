@@ -209,3 +209,5 @@ export function subscribeRequests(callback: Subscriber) {
 function notifySubscribers() {
   subscribers.forEach((callback) => callback(requests));
 }
+
+export default {};
