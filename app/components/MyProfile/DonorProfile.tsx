@@ -13,38 +13,73 @@ import {
     User,
 } from "lucide-react-native";
 import {
+    ActivityIndicator,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { apiFetch } from "../../lib/apiClient";
+import { clearToken } from "../../lib/token";
 
 interface DonorProfileProps {
   onNavigate: (screen: string) => void;
   onLogout: () => void;
 }
 
-const donorStats = {
-  totalDonations: 45,
-  activeDonations: 8,
-  peopleHelped: 156,
-  impactScore: 92,
-  joinedDate: "Jan 2024",
-  monthlyDonations: [
-    { month: "Oct", count: 12 },
-    { month: "Nov", count: 15 },
-    { month: "Dec", count: 18 },
-  ],
-};
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: string | null;
+  totalDonations: number;
+  ratingAvg: number;
+  totalReceived: number;
+}
 
 export default function DonorProfile({
   onNavigate,
   onLogout,
 }: DonorProfileProps) {
-  const menuItems = [
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiFetch("/api/users/profile");
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch profile");
+      }
+      
+      const data = await response.json();
+      setUser(data.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await clearToken();
+    router.push("/login");
+    onLogout();
+  };
+  const menu=[
     {
-      icon: User,
+      icon :User,
       label: "Edit Profile",
       description: "Update your personal information",
       screen: "edit-profile",
@@ -97,141 +132,80 @@ export default function DonorProfile({
         </Text>
       </View>
 
-      {/* Profile Card */}
-      <View style={styles.profileWrapper}>
-        <View style={styles.profileCard}>
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <User size={36} color="#fff" />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.name}>John Donor</Text>
-              <Text style={styles.email}>donor@example.com</Text>
-              <Text style={styles.joined}>
-                Member since {donorStats.joinedDate}
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            style={styles.editBtn}
-            onPress={() => onNavigate("edit-profile")}
-          >
-            <Text style={styles.editBtnText}>Edit Profile</Text>
-          </Pressable>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1A5F7A" />
         </View>
-      </View>
-
-      {/* Impact Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Impact</Text>
-          <Pressable style={styles.viewAll}>
-            <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={16} color="#1A5F7A" />
-          </Pressable>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
-
-        {/* Stats Grid */}
-        <View style={styles.grid}>
-          <View style={[styles.statCard, styles.statPrimary]}>
-            <Heart size={20} color="#fff" />
-            <Text style={styles.statLabel}>Total Donations</Text>
-            <Text style={styles.statValue}>{donorStats.totalDonations}</Text>
-            <Text style={styles.statSub}>
-              +{donorStats.monthlyDonations[2].count} this month
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <TrendingUp size={20} color="#16A34A" />
-            <Text style={styles.statLabelDark}>Active</Text>
-            <Text style={styles.statValueDark}>
-              {donorStats.activeDonations}
-            </Text>
-            <Text style={styles.statSubDark}>In progress</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Award size={20} color="#D97706" />
-            <Text style={styles.statLabelDark}>People Helped</Text>
-            <Text style={styles.statValueDark}>
-              {donorStats.peopleHelped}
-            </Text>
-            <Text style={styles.statSubDark}>Lives impacted</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Calendar size={20} color="#2563EB" />
-            <Text style={styles.statLabelDark}>Impact Score</Text>
-            <Text style={styles.statValueDark}>
-              {donorStats.impactScore}%
-            </Text>
-            <Text style={styles.statSubDark}>Excellent!</Text>
-          </View>
-        </View>
-
-        {/* Monthly Chart */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Monthly Activity</Text>
-
-          <View style={styles.chartRow}>
-            {donorStats.monthlyDonations.map((item) => {
-              const height = (item.count / 20) * 100;
-              return (
-                <View key={item.month} style={styles.chartItem}>
-                  <View style={styles.chartBarBg}>
-                    <View
-                      style={[
-                        styles.chartBar,
-                        { height: `${height}%` },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.chartMonth}>{item.month}</Text>
-                  <Text style={styles.chartCount}>{item.count}</Text>
+      ) : user ? (
+        <>
+          {/* Profile Card */}
+          <View style={styles.profileWrapper}>
+            <View style={styles.profileCard}>
+              <View style={styles.profileRow}>
+                <View style={styles.avatar}>
+                  <User size={36} color="#fff" />
                 </View>
-              );
-            })}
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{user.name}</Text>
+                  <Text style={styles.email}>{user.email}</Text>
+                </View>
+              </View>
+
+              <Pressable
+                style={styles.editBtn}
+                onPress={() => onNavigate("edit-profile")}
+              >
+                <Text style={styles.editBtnText}>Edit Profile</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </View>
 
-      {/* Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Settings</Text>
+          {/* Impact Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Impact</Text>
+            </View>
 
-        <View style={styles.menuCard}>
-          {menuItems.map((item, index) => (
-            <Pressable
-              key={item.screen}
-              style={[
-                styles.menuRow,
-                index !== menuItems.length - 1 && styles.borderBottom,
-              ]}
-              onPress={() => onNavigate(item.screen)}
-            >
-              <View style={styles.menuIcon}>
-                <item.icon size={20} color={item.color} />
+            {/* Stats Grid */}
+            <View style={styles.grid}>
+              <View style={[styles.statCard, styles.statPrimary]}>
+                <Heart size={20} color="#fff" />
+                <Text style={styles.statLabel}>Total Donations</Text>
+                <Text style={styles.statValue}>{user.totalDonations}</Text>
               </View>
 
-              <View style={{ flex: 1 }}>
-                <Text style={styles.menuTitle}>{item.label}</Text>
-                <Text style={styles.menuDesc}>{item.description}</Text>
+              <View style={styles.statCard}>
+                <Award size={20} color="#D97706" />
+                <Text style={styles.statLabelDark}>Rating</Text>
+                <Text style={styles.statValueDark}>
+                {(user.ratingAvg ?? 0).toFixed(1)}
+                </Text>
+                <Text style={styles.statSubDark}>Average</Text>
               </View>
 
-              <ChevronRight size={20} color="#9CA3AF" />
-            </Pressable>
-          ))}
-        </View>
-      </View>
+              <View style={styles.statCard}>
+                <TrendingUp size={20} color="#16A34A" />
+                <Text style={styles.statLabelDark}>Received</Text>
+                <Text style={styles.statValueDark}>
+                  {user.totalReceived}
+                </Text>
+                <Text style={styles.statSubDark}>Items</Text>
+              </View>
+            </View>
+          </View>
 
-      {/* Logout */}
-      <Pressable style={styles.logoutBtn} onPress={onLogout}>
-        <LogOut size={20} color="#DC2626" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
+          {/* Logout Button */}
+          <Pressable style={styles.logoutButton} onPress={handleLogout}>
+            <LogOut size={20} color="#fff" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </Pressable>
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -243,12 +217,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A5F7A",
     padding: 24,
     paddingTop: 50,
-    paddingBottom: 100,
   },
   headerTitle: { color: "#fff", fontSize: 22, fontWeight: "600" },
   headerSub: { color: "#E5E7EB", marginTop: 4 },
 
-  profileWrapper: { marginTop: -70, paddingHorizontal: 16 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 16,
+    textAlign: "center",
+  },
+
+  profileWrapper: { marginTop: 16, paddingHorizontal: 16 },
   profileCard: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -265,7 +256,6 @@ const styles = StyleSheet.create({
   },
   name: { fontWeight: "600", fontSize: 16 },
   email: { color: "#6B7280", fontSize: 12 },
-  joined: { color: "#9CA3AF", fontSize: 11 },
 
   editBtn: {
     backgroundColor: "#1A5F7A",
@@ -282,8 +272,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   sectionTitle: { fontWeight: "600", fontSize: 16 },
-  viewAll: { flexDirection: "row", alignItems: "center", gap: 4 },
-  viewAllText: { color: "#1A5F7A", fontSize: 12 },
 
   grid: {
     flexDirection: "row",
@@ -306,65 +294,7 @@ const styles = StyleSheet.create({
   statValueDark: { color: "#111827", fontSize: 28, fontWeight: "600" },
   statSubDark: { color: "#9CA3AF", fontSize: 11 },
 
-  chartCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-  },
-  chartTitle: { fontWeight: "500", marginBottom: 12 },
-  chartRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: 120,
-  },
-  chartItem: { flex: 1, alignItems: "center" },
-  chartBarBg: {
-    width: "70%",
-    height: "100%",
-    backgroundColor: "#E5E7EB",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    justifyContent: "flex-end",
-  },
-  chartBar: {
-    width: "100%",
-    backgroundColor: "#1A5F7A",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  chartMonth: { fontSize: 11, color: "#6B7280", marginTop: 6 },
-  chartCount: { fontSize: 11, color: "#111827" },
-
-  menuCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    marginTop: 12,
-    overflow: "hidden",
-  },
-  menuRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 12,
-  },
-  borderBottom: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  menuTitle: { fontWeight: "500" },
-  menuDesc: { fontSize: 12, color: "#6B7280" },
-
-  logoutBtn: {
+  logoutButton: {
     backgroundColor: "#FEE2E2",
     margin: 16,
     padding: 14,

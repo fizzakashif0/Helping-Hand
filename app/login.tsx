@@ -1,17 +1,77 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { apiFetch } from "./lib/apiClient";
+import { saveToken } from "./lib/token";
+import { setUserRole } from "./store/userStore";
+
+interface LoginResponse {
+  token?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string | null;
+    [key: string]: any;
+  };
+  requiresRoleSelection?: boolean;
+  message?: string;
+}
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // placeholder behaviour
-    Alert.alert("Login", `Email: ${email}\nPassword: ${password}`);
-    // after login as Donor/Recipient, go to role selection screen
-    router.push("/role-selection");
+  const handleLogin = async () => {
+    // Validate inputs
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiFetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data: LoginResponse = await response.json();
+
+      if (!response.ok) {
+        Alert.alert("Login Failed", data?.message || "An error occurred");
+        return;
+      }
+
+      // Store user role from the response
+      if (data.user?.role) {
+        setUserRole(data.user.role as "donor" | "recipient" | "ngo");
+      } else {
+        setUserRole(null);
+      }
+
+      // Save token for future API requests
+      if (data.token) await saveToken(data.token);
+
+      // Redirect based on role selection requirement
+      if (data.requiresRoleSelection) {
+        router.push("/role-selection");
+      } else {
+        router.push("/home");
+      }
+    } catch (error) {
+      Alert.alert("Error", error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNGOLogin = () => {
@@ -39,6 +99,7 @@ export default function LoginScreen() {
         style={styles.input}
         keyboardType="email-address"
         autoCapitalize="none"
+        editable={!loading}
       />
 
       <TextInput
@@ -47,21 +108,26 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         style={styles.input}
         secureTextEntry
+        editable={!loading}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
-        <Text style={styles.buttonText}>Log In as Donor/Recipient</Text>
+      <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Log In as Donor/Recipient</Text>
+        )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.ngoButton} onPress={handleNGOLogin} activeOpacity={0.85}>
+      <TouchableOpacity style={styles.ngoButton} onPress={handleNGOLogin} activeOpacity={0.85} disabled={loading}>
         <Text style={styles.buttonText}>Log In as NGO</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.adminButton} onPress={handleAdminLogin} activeOpacity={0.85}>
+      <TouchableOpacity style={styles.adminButton} onPress={handleAdminLogin} activeOpacity={0.85} disabled={loading}>
         <Text style={styles.buttonText}>Log In as Admin</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push('/signup')} style={styles.link}>
+      <TouchableOpacity onPress={() => router.push('/signup')} style={styles.link} disabled={loading}>
         <Text style={styles.linkText}>Don't have an account? Sign up</Text>
       </TouchableOpacity>
     </View>
