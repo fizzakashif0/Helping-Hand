@@ -105,3 +105,12 @@ exports.loginNGO = asyncHandler(async (req, res) => {
   const result = await authService.loginNGO({ email, password });
   return res.status(200).json(result);
 });
+exports.loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body || {};
+
+  const missing = requireFields({ email, password }, ['email', 'password']);
+  if (missing) return res.status(400).json({ message: `${missing} is required` });
+
+  const result = await authService.loginAdmin({ email, password });
+  return res.status(200).json(result);
+});

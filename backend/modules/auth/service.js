@@ -302,6 +302,37 @@ async function loginNGO({ email, password }) {
     verificationStatus: user.ngoProfile?.verificationStatus || 'pending',
   };
 }
+async function loginAdmin({ email, password }) {
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
+  if (!user) {
+    const err = new Error('Invalid credentials');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (user.role !== 'admin') {
+    const err = new Error('Invalid credentials');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const ok = await comparePassword(password, user.password);
+  if (!ok) {
+    const err = new Error('Invalid credentials');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const token = generateToken({ id: user._id, email: user.email, role: user.role });
+
+  return {
+    token,
+    user: toPublicUser(user),
+    requiresRoleSelection: false,
+  };
+}
 module.exports = {
   registerUser,
   loginUser,
@@ -310,5 +341,6 @@ module.exports = {
   resetPassword,
   googleLogin,
   registerNGO,   
-  loginNGO,      sss
+  loginNGO,   
+  loginAdmin,
 };

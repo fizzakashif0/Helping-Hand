@@ -118,9 +118,39 @@ export default function LoginScreen() {
     setLoading(false);
   }
 };
-  const handleAdminLogin = () => {
-    Alert.alert("Admin Login", "Coming soon");
-  };
+const handleAdminLogin = async () => {
+  if (!email.trim() || !password.trim()) {
+    Alert.alert("Error", "Please enter email and password");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const response = await apiFetch("/api/auth/login-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), password }),
+    });
+
+    const data: LoginResponse = await response.json();
+
+    if (!response.ok) {
+      Alert.alert("Login Failed", data.message || "Invalid credentials");
+      return;
+    }
+
+    if (data.token) await saveToken(data.token);
+    if (data.user?.role) {
+      setUserRole(data.user.role as any);
+    }
+
+    router.push("/admin-dashboard" as any);
+  } catch {
+    Alert.alert("Error", "Something went wrong. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <View style={styles.container}>

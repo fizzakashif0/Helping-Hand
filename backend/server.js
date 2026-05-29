@@ -10,7 +10,6 @@ connectDB();
 // Ensure auth model is registered
 require("./modules/auth/model");
 
-
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
@@ -46,6 +45,8 @@ const usersRoutes = require("./modules/users/routes");
 const chatRoutes = require("./modules/chats/routes");
 const messageRoutes = require("./modules/messages/routes");
 const chatRequestRoutes = require("./modules/chatRequests/routes");
+const adminRoutes = require('./modules/admin/routes');
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
@@ -54,6 +55,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/donation-requests", donationRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/home", homeRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 app.use("/api/chats", chatRoutes);
