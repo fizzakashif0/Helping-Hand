@@ -78,3 +78,30 @@ exports.googleLogin = asyncHandler(async (req, res) => {
   return res.status(200).json(result);
 });
 
+exports.registerNGO = asyncHandler(async (req, res) => {
+  const { name, email, password, orgName, registrationNumber, orgType, missionStatement, phone, address, website } = req.body || {};
+
+  const missing = requireFields(
+    { name, email, password, orgName },
+    ['name', 'email', 'password', 'orgName']   // only these 4 are required
+  );
+  if (missing) return res.status(400).json({ message: `${missing} is required` });
+
+  const result = await authService.registerNGO({
+    name, email, password,
+    orgName, registrationNumber, orgType,
+    missionStatement, phone, address, website,
+  });
+
+  return res.status(201).json(result);
+});
+
+exports.loginNGO = asyncHandler(async (req, res) => {
+  const { email, password } = req.body || {};
+
+  const missing = requireFields({ email, password }, ['email', 'password']);
+  if (missing) return res.status(400).json({ message: `${missing} is required` });
+
+  const result = await authService.loginNGO({ email, password });
+  return res.status(200).json(result);
+});

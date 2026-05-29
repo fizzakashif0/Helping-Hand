@@ -24,6 +24,8 @@ function toPublicUser(userDoc) {
     ratingAvg: userDoc.ratingAvg,
     totalDonations: userDoc.totalDonations,
     totalReceived: userDoc.totalReceived,
+    totalReceived: userDoc.totalReceived,
+    ngoProfile: userDoc.ngoProfile,
   };
 }
 
@@ -221,7 +223,85 @@ async function googleLogin({ googleId, email, name, profilePicture }) {
     requiresRoleSelection: makeRequiresRoleSelection(user),
   };
 }
+async function registerNGO({ name, email, password, orgName, registrationNumber, orgType, missionStatement, phone, address, website }) {
+  const normalizedEmail = String(email).toLowerCase().trim();
 
+  const existing = await User.findOne({ email: normalizedEmail });
+  if (existing) {
+    const err = new Error('Email already in use');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const hashed = await hashPassword(password);
+
+  const user = await User.create({
+    name: String(name).trim(),
+    email: normalizedEmail,
+    password: hashed,
+    role: 'NGO',
+    authProvider: 'local',
+    ngoProfile: {
+      orgName,
+      registrationNumber,
+      orgType,
+      missionStatement,
+      phone,
+      address,
+      website,
+      verificationStatus: 'pending',
+    },
+  });
+
+  const token = generateToken({ id: user._id, email: user.email, role: user.role });
+
+  return {
+    token,
+    user: toPublicUser(user),
+    requiresRoleSelection: false,
+    verificationStatus: 'pending',
+  };
+}
+
+async function loginNGO({ email, password }) {
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  const user = await User.findOne({ email: normalizedEmail }).select('+password');
+  if (!user) {
+    const err = new Error('Invalid credentials');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  // Must actually be an NGO account
+  if (user.role !== 'NGO') {
+    const err = new Error('No NGO account found with these credentials');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (user.isBlocked) {
+    const err = new Error('Account is blocked');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const ok = await comparePassword(password, user.password);
+  if (!ok) {
+    const err = new Error('Invalid credentials');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const token = generateToken({ id: user._id, email: user.email, role: user.role });
+
+  return {
+    token,
+    user: toPublicUser(user),
+    requiresRoleSelection: false,
+    verificationStatus: user.ngoProfile?.verificationStatus || 'pending',
+  };
+}
 module.exports = {
   registerUser,
   loginUser,
@@ -229,5 +309,6 @@ module.exports = {
   verifyOtp,
   resetPassword,
   googleLogin,
+  registerNGO,   
+  loginNGO,      sss
 };
-
