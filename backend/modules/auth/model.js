@@ -29,6 +29,33 @@ const userSchema = new mongoose.Schema(
       enum: ['donor', 'recipient', 'NGO', 'admin'],
       default: null,
     },
+    ngoProfile: {
+  orgName:             { type: String },
+  registrationNumber:  { type: String },
+  orgType: {
+    type: String,
+    enum: ['food_bank', 'shelter', 'medical', 'education', 'general', 'other'],
+  },
+  missionStatement: { type: String },
+  phone:            { type: String },
+  address:          { type: String },
+  website:          { type: String },
+  documents: [
+    {
+      name:       String,   // e.g. "Certificate of Incorporation"
+      url:        String,   // file URL after upload
+      uploadedAt: { type: Date, default: Date.now },
+    },
+  ],
+  verificationStatus: {
+    type:    String,
+    enum:    ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  },
+  rejectionReason: { type: String },
+  reviewedBy:      { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  reviewedAt:      { type: Date },
+},
 
     phone: String,
 

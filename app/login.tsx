@@ -44,14 +44,13 @@ export default function LoginScreen() {
     try {
       const response = await apiFetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data: LoginResponse = await response.json();
 
       if (!response.ok) {
-        Alert.alert("Login Failed", data?.message || "An error occurred");
+        Alert.alert("Login Failed", data.message || "Invalid credentials");
         return;
       }
 
@@ -67,8 +66,8 @@ export default function LoginScreen() {
       } else {
         router.push("/home");
       }
-    } catch (error) {
-      Alert.alert("Error", error instanceof Error ? error.message : "An error occurred");
+    } catch {
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -80,44 +79,45 @@ export default function LoginScreen() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await apiFetch("/api/auth/login-ngo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
 
-      const data: LoginResponse = await response.json();
+  setLoading(true);
+  try {
+    const response = await apiFetch("/api/auth/login-ngo", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim(), password }),
+    });
 
-      if (!response.ok) {
-        Alert.alert("Login Failed", data.message || "Invalid credentials");
-        return;
-      }
+    const data: LoginResponse & { verificationStatus?: string } = await response.json();
 
-      if (data.token) await saveToken(data.token);
-      if (data.user?.role) {
-        setUserRole(data.user.role as "donor" | "recipient" | "ngo");
-      }
-
-      if (data.verificationStatus === "approved") {
-        router.push("/ngo-home" as any);
-      } else if (data.verificationStatus === "rejected") {
-        const reason = data.user?.ngoProfile?.rejectionReason || "No reason provided.";
-        Alert.alert(
-          "Application Rejected",
-          `Your NGO application was rejected.\n\nReason: ${reason}`
-        );
-      } else {
-        router.push("/ngo-pending" as any);
-      }
-    } catch {
-      Alert.alert("Error", "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      Alert.alert("Login Failed", data.message || "Invalid credentials");
+      return;
     }
-  };
 
+    if (data.token) await saveToken(data.token);
+    if (data.user?.role) {
+      setUserRole(data.user.role as "donor" | "recipient" | "ngo");
+    }
+
+    // Route based on verification status
+    if (data.verificationStatus === "approved") {
+      router.push("/ngo-home" );
+    } else if (data.verificationStatus === "rejected") {
+      const reason = data.user?.ngoProfile?.rejectionReason || "No reason provided.";
+      Alert.alert(
+        "Application Rejected",
+        `Your NGO application was rejected.\n\nReason: ${reason}`,
+      );
+    } else {
+      // pending
+      router.push("/ngo-pending");
+    }
+  } catch {
+    Alert.alert("Error", "Something went wrong. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
   const handleAdminLogin = () => {
     Alert.alert("Admin Login", "Coming soon");
   };
@@ -194,8 +194,8 @@ export default function LoginScreen() {
       </TouchableOpacity>
     </View>
   );
-}
 
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,

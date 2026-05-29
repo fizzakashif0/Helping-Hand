@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, ActivityIndicator, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { apiFetch } from "./lib/apiClient";
-import { buildApiUrl } from "./lib/api";
-import { setUserRole } from "./store/userStore";
 import { saveToken } from "./lib/token";
+import { setUserRole } from "./store/userStore";
 
 interface RegisterResponse {
   token?: string;
