@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../modules/auth/model');
 
 function getAuthHeader(req) {
   return req.headers?.authorization;
@@ -11,7 +12,7 @@ function extractBearerToken(authHeader) {
   return token || null;
 }
 
-function verifyToken(req, res, next) {
+async function verifyToken(req, res, next) {
   try {
     const token = extractBearerToken(getAuthHeader(req));
     if (!token) {
@@ -30,6 +31,19 @@ function verifyToken(req, res, next) {
       email: decoded.email,
       role: decoded.role || null,
     };
+
+    const user = await User.findById(req.user.id).select('isVerified authProvider isBlocked');
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({ message: 'Account is blocked' });
+    }
+
+    if (user.authProvider === 'local' && !user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email before accessing this resource' });
+    }
 
     return next();
   } catch (err) {
@@ -58,5 +72,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { verifyToken, requireRole };
-
+module.exports = { verifyToken, requireRole, verifyJWT: verifyToken };

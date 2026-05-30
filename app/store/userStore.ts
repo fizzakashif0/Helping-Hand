@@ -1,4 +1,4 @@
-type UserRole = "donor" | "recipient" | "ngo" | null;
+export type UserRole = "donor" | "recipient" | "ngo" | null;
 
 let userRole: UserRole = null;
 

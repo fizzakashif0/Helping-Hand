@@ -1,22 +1,31 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { GoogleSignInButton } from "./components/GoogleSignInButton";
 import { apiFetch } from "./lib/apiClient";
-import { saveToken } from "./lib/token";
-import { setUserRole } from "./store/userStore";
+import { getSignupErrorMessage } from "./lib/authErrors";
+import { parseApiResponse } from "./lib/parseApiResponse";
+
 
 interface RegisterResponse {
-  token?: string;
   user?: {
     id: string;
     name: string;
     email: string;
     role: string | null;
-    [key: string]: any;
   };
-  requiresRoleSelection?: boolean;
+  requiresEmailVerification?: boolean;
   message?: string;
+  verificationUrl?: string;
 }
 
 export default function SignupScreen() {
@@ -26,9 +35,24 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetail, setSuccessDetail] = useState("");
+
+  const extractErrorMessage = (err: unknown, fallback: string) => {
+    // Common shapes:
+    // - fetch/parseApiResponse: message is already in `data.message`
+    // - axios-like: err.response.data.message
+    const anyErr = err as any;
+    const msg =
+      anyErr?.response?.data?.message ??
+      anyErr?.response?.data?.error ??
+      anyErr?.message ??
+      anyErr?.toString?.();
+
+    if (typeof msg === "string" && msg.trim()) return msg.trim();
+    return fallback;
+  };
 
   const handleSignup = async () => {
-    // Validate inputs
     if (!name.trim() || !email.trim() || !password.trim()) {
       Alert.alert("Error", "Please fill in all fields");
       return;
@@ -37,6 +61,7 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       const response = await apiFetch("/api/auth/register", {
+
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,36 +73,37 @@ export default function SignupScreen() {
         }),
       });
 
-      const data: RegisterResponse = await response.json();
-  console.log("Response status:", response.status, "ok:", response.ok);
-   console.log("Response data:", JSON.stringify(data));
-      if (!response.ok) {
-        Alert.alert("Sign Up Failed", data?.message || "An error occurred");
+      const { ok, status, data } = await parseApiResponse<any>(response);
+
+      if (!ok) {
+        const rawMessage =
+          (data as any)?.message ?? (data as any)?.error ?? (data as any)?.toString?.();
+        const errorMessage = getSignupErrorMessage(status, rawMessage);
+        Alert.alert("Sign Up Failed", errorMessage);
         return;
       }
 
-      // Store user role from the response
-      if (data.user?.role) {
-        setUserRole(data.user.role as "donor" | "recipient" | "ngo");
-      } else {
-        setUserRole(null);
-      }
 
-      // Save token for future API requests
-     if (data.token) await saveToken(data.token);
+      // Backend may return a custom message; keep a safe fallback.
+      const detail =
+        data?.message ||
+        "We sent a verification link to your email. Please verify your account, then log in.";
 
-      // Show success modal
-      console.log("About to show modal");
+      const devHint =
+
+        __DEV__ && data.verificationUrl
+          ? `\n\nDev link (email not configured):\n${data.verificationUrl}`
+          : "";
+      setSuccessDetail(detail + devHint);
       setShowSuccessModal(true);
 
-      // Auto-dismiss after 2.5 seconds and redirect
       setTimeout(() => {
         setShowSuccessModal(false);
         router.push("/login");
-      }, 2500);
-    } catch (error) {
-       console.log("Caught error:", error);
-      Alert.alert("Error", error instanceof Error ? error.message : "An error occurred");
+      }, 3000);
+    } catch (err) {
+      const message = extractErrorMessage(err, "Network error");
+      Alert.alert("Error", message || "Server error");
     } finally {
       setLoading(false);
     }
@@ -93,70 +119,71 @@ export default function SignupScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              Signup Successful
-            </Text>
-            <Text style={styles.modalMessage}>
-              Your account has been created. Please login to continue.
-            </Text>
+            <Text style={styles.modalTitle}>Signup Successful</Text>
+            <Text style={styles.modalMessage}>{successDetail}</Text>
           </View>
         </View>
       </Modal>
 
       <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.title}>Create Account</Text>
 
-      <TextInput
-        placeholder="Full name"
-        value={name}
-        onChangeText={setName}
-        style={styles.input}
-        editable={!loading}
-      />
+        <TextInput
+          placeholder="Full name"
+          value={name}
+          onChangeText={setName}
+          style={styles.input}
+          editable={!loading}
+        />
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!loading}
-      />
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          style={styles.input}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={!loading}
+        />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-        secureTextEntry
-        editable={!loading}
-      />
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          style={styles.input}
+          secureTextEntry
+          editable={!loading}
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleSignup} activeOpacity={0.85} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign Up</Text>
-        )}
-      </TouchableOpacity>
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>Or sign up with</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      <View style={styles.socialRow}>
-        <TouchableOpacity style={styles.socialBtn} onPress={() => Alert.alert("Google", "Google sign-up coming soon")} activeOpacity={0.85} disabled={loading}>
-          <Ionicons name="logo-google" size={20} color="#fff" />
-          <Text style={styles.socialText}>Google</Text>
+        <TouchableOpacity style={styles.button} onPress={handleSignup} activeOpacity={0.85} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
-      </View>
 
-      <TouchableOpacity onPress={() => router.push('/login')} style={styles.link} disabled={loading}>
-        <Text style={styles.linkText}>Already have an account? Log in</Text>
-      </TouchableOpacity>
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>Or sign up with</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <View style={styles.socialRow}>
+          <GoogleSignInButton disabled={loading} />
+        </View>
+
+        <TouchableOpacity
+          onPress={() => router.push("/verify-email")}
+          style={styles.link}
+          disabled={loading}
+        >
+          <Text style={styles.linkText}>Need to verify your email?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push("/login")} style={styles.link} disabled={loading}>
+          <Text style={styles.linkText}>Already have an account? Log in</Text>
+        </TouchableOpacity>
       </View>
     </>
   );
@@ -166,81 +193,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
-    backgroundColor: '#1A5F7A'
+    justifyContent: "center",
+    backgroundColor: "#1A5F7A",
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 24,
-    textAlign: 'center',
-    color: '#fff'
+    textAlign: "center",
+    color: "#fff",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#2D9E7A',
+    borderColor: "#2D9E7A",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: '#fff',
-    color: '#0F2141'
+    backgroundColor: "#fff",
+    color: "#0F2141",
   },
   button: {
-    backgroundColor: '#2D9E7A',
+    backgroundColor: "#2D9E7A",
     paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 8
+    marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600'
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
   },
   link: {
     marginTop: 12,
-    alignItems: 'center'
+    alignItems: "center",
   },
   linkText: {
-    color: '#fff'
+    color: "#fff",
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 20,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     opacity: 0.3,
   },
   dividerText: {
-    color: '#fff',
+    color: "#fff",
     marginHorizontal: 12,
     fontSize: 12,
   },
   socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 16,
-  },
-  socialBtn: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: '#0F2141',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2D9E7A',
-    gap: 8,
-  },
-  socialText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
@@ -268,6 +278,5 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     textAlign: "center",
     lineHeight: 20,
-    marginBottom: 18,
   },
 });

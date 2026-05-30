@@ -86,6 +86,16 @@ const userSchema = new mongoose.Schema(
 
     otpExpiry: Date,
 
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+
+    emailVerificationExpiry: {
+      type: Date,
+      select: false,
+    },
+
     ratingAvg: {
       type: Number,
       default: 0,
