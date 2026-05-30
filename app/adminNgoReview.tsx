@@ -70,36 +70,21 @@ export default function NGOReviewScreen() {
     }
   };
 
-  const handleApprove = (id: string, orgName: string) => {
-    Alert.alert(
-      "Approve NGO",
-      `Are you sure you want to approve "${orgName}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Approve",
-          style: "default",
-          onPress: async () => {
-            setActionLoading(true);
-            try {
-              const response = await apiFetch(`/api/admin/ngos/${id}/approve`, {
-                method: "PUT",
-              });
-              const data = await response.json();
-              if (!response.ok) throw new Error(data.message);
-              setNgos((prev) => prev.filter((n) => n._id !== id));
-              Alert.alert("✅ Approved", `${orgName} has been approved.`);
-            } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Failed to approve");
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
+ const handleApprove = async (id: string, orgName: string) => {
+  setActionLoading(true);
+  try {
+    const response = await apiFetch(`/api/admin/ngos/${id}/approve`, {
+      method: "PUT",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+    setNgos((prev) => prev.filter((n) => n._id !== id));
+  } catch (err) {
+    Alert.alert("Error", err instanceof Error ? err.message : "Failed to approve");
+  } finally {
+    setActionLoading(false);
+  }
+};
   const openRejectModal = (id: string) => {
     setRejectingId(id);
     setRejectReason("");
