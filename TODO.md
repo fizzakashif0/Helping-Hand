@@ -1,20 +1,32 @@
-# TODO: Implement NGO and Admin Screens for Helping-Hand App
+# TODO - Auth Improvements (MERN Mobile)
 
-## NGO Side Screens
-- [x] Create NGO Home Dashboard screen (app/ngo-home.tsx)
-- [x] Create Create Event Screen (app/create-event.tsx)
-- [x] Create Event Details Setup Screen (app/event-details-setup.tsx)
-- [x] Create Publish Event Confirmation Screen (app/publish-event-confirmation.tsx)
-- [x] Create Event Participants Screen (app/event-participants.tsx)
-- [x] Create Event Distribution Tracking Screen (app/event-distribution-tracking.tsx)
-- [x] Create Event Completion Screen (app/event-completion.tsx)
-- [x] Create NGO Reports Screen (app/ngo-reports.tsx)
-- [x] Create NGO Profile Screen (app/ngo-profile.tsx)
+## Frontend: Error handling
+- [x] Update `app/signup.tsx` to map backend validation errors to exact UI strings:
+  - [x] Invalid email format -> “Invalid email format”
+  - [x] Email already in use -> “Email already in use”
+- [x] Ensure signup handles loading state and never fails silently.
 
-## Admin Side Screens
-- [x] Create Admin Login Screen (app/admin-login.tsx)
-- [x] Create Admin Dashboard (app/admin-dashboard.tsx)
-- [x] Create User Management Screen (app/user-management.tsx)
-- [x] Create Donation Monitoring Screen (app/donation-monitoring.tsx)
-- [x] Create Report Handling Screen (app/report-handling.tsx)
-- [x] Create Analytics and Reports Screen (app/analytics-reports.tsx)
+
+- [x] Update `app/login.tsx` to map backend auth errors to exact UI strings:
+  - [x] Invalid email address -> “Invalid email address”
+  - [x] Incorrect password -> “Incorrect password”
+- [x] Ensure generic auth errors show a friendly message.
+
+
+## Frontend/Backend: Google Auth
+- [ ] Verify Google sign-in/up end-to-end uses existing backend endpoint `/api/auth/google-login`.
+- [ ] Ensure frontend loading/error handling is correct and no silent failures.
+
+## Backend/Frontend: Email Verification
+- [ ] Verify local sign-up triggers verification email and unverified users cannot log in.
+- [ ] Confirm protected middleware blocks unverified local users.
+- [ ] Adjust backend middleware or frontend flow only if required.
+
+## Testing checklist
+- [ ] Test signup invalid email -> expected alert text
+- [ ] Test signup duplicate email -> expected alert text
+- [ ] Test login wrong email -> expected alert text
+- [ ] Test login wrong password -> expected alert text
+- [ ] Test google sign-in for new/existing user
+- [ ] Test email verification link flow + expired/invalid link handling
+

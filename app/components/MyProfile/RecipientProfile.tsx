@@ -1,84 +1,117 @@
 import {
-    Bell,
-    ChevronRight,
-    HelpCircle,
-    Info,
-    LogOut,
-    Settings,
-    Shield,
-    User,
+  Bell,
+  ChevronRight,
+  HelpCircle,
+  Info,
+  LogOut,
+  Settings,
+  Shield,
+  User,
 } from "lucide-react-native";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { apiFetch } from "../../lib/apiClient";
+import { clearToken } from "../../lib/token";
 
 interface Props {
-  onNavigate: (screen: string) => void;
-  onLogout: () => void;
+onNavigate: (screen: string) => void;
 }
 
-export default function RecipientProfile({ onNavigate, onLogout }: Props) {
-  const menu = [
-    { label: "Edit Profile", icon: User, screen: "edit-profile" },
-    { label: "Account Settings", icon: Settings, screen: "account-settings" },
-    { label: "Notifications", icon: Bell, screen: "notifications" },
-    { label: "Privacy & Security", icon: Shield, screen: "privacy" },
-    { label: "Help & Support", icon: HelpCircle, screen: "help" },
-    { label: "About", icon: Info, screen: "about" },
-  ];
+export default function RecipientProfile({ onNavigate }: Props) {
+const router = useRouter();
+const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState(false);
 
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const response = await apiFetch("/api/users/profile");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      setUser(data.user);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchProfile();
+}, []);
+
+const handleLogout = async () => {
+  await clearToken();
+  router.push("/login");
+};
+
+const menu = [
+  { label: "Edit Profile", icon: User, screen: "edit-profile" },
+  { label: "Account Settings", icon: Settings, screen: "account-settings" },
+  { label: "Notifications", icon: Bell, screen: "notifications" },
+  { label: "Privacy & Security", icon: Shield, screen: "privacy" },
+  { label: "Help & Support", icon: HelpCircle, screen: "help" },
+  { label: "About", icon: Info, screen: "about" },
+];
+
+if (loading) {
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Text style={styles.headerSub}>Manage your account</Text>
-      </View>
-
-      {/* Profile Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <User color="white" size={40} />
-        </View>
-        <Text style={styles.name}>Recipient User</Text>
-        <Text style={styles.email}>recipient@example.com</Text>
-
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => onNavigate("edit-profile")}
-        >
-          <Text style={styles.editText}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Menu */}
-      <View style={styles.menu}>
-        {menu.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuItem}
-            onPress={() => onNavigate(item.screen)}
-          >
-            <item.icon color="#1A5F7A" />
-            <Text style={styles.menuText}>{item.label}</Text>
-            <ChevronRight color="gray" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Logout */}
-      <TouchableOpacity style={styles.logout} onPress={onLogout}>
-        <LogOut color="red" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <ActivityIndicator size="large" color="#1A5F7A" />
+    </View>
   );
 }
 
+if (error) {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text style={{ color: "red" }}>Failed to load profile</Text>
+    </View>
+  );
+}
+
+return (
+  <ScrollView style={styles.container}>
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>Profile</Text>
+      <Text style={styles.headerSub}>Manage your account</Text>
+    </View>
+
+    <View style={styles.profileCard}>
+      <View style={styles.avatar}>
+        <User color="white" size={40} />
+      </View>
+      <Text style={styles.name}>{user?.name}</Text>
+      <Text style={styles.email}>{user?.email}</Text>
+      <TouchableOpacity style={styles.editBtn} onPress={() => onNavigate("edit-profile")}>
+        <Text style={styles.editText}>Edit Profile</Text>
+      </TouchableOpacity>
+    </View>
+
+    <View style={styles.menu}>
+      {menu.map((item, index) => (
+        <TouchableOpacity key={index} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
+          <item.icon color="#1A5F7A" />
+          <Text style={styles.menuText}>{item.label}</Text>
+          <ChevronRight color="gray" />
+        </TouchableOpacity>
+      ))}
+    </View>
+
+    <TouchableOpacity style={styles.logout} onPress={handleLogout}>
+      <LogOut color="red" />
+      <Text style={styles.logoutText}>Logout</Text>
+    </TouchableOpacity>
+  </ScrollView>
+);
+}
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
   header: {

@@ -1,91 +1,89 @@
+import { useRouter } from "expo-router";
 import {
-    Calendar,
-    CheckCircle,
-    Gift,
-    MessageCircle,
-    TrendingUp
+  Calendar,
+  CheckCircle,
+  Gift,
+  MessageCircle,
 } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { DEMO_REQUESTER_ID } from "../../lib/donations";
+import { timeAgo } from "../../lib/timeAgo";
+import {
+  AppNotification,
+  fetchNotifications,
+  markNotificationRead,
+} from "../../store/notificationStore";
 
 interface RecipientNotificationsProps {
   onNavigate: (screen: string) => void;
 }
 
-const mockNotifications = [
-  {
-    id: "1",
-    title: "New Donation Match!",
-    message: "A donor has groceries available near you (1.2 km away)",
-    time: "5 min ago",
-    icon: Gift,
-    color: "#16a34a",
-    bgColor: "#dcfce7",
-    read: false,
-    action: "browse-donations",
-  },
-  {
-    id: "2",
-    title: "Message from Sarah Johnson",
-    message:
-      "Hi! I can provide the winter clothes you requested. Let's coordinate pickup.",
-    time: "1 hour ago",
-    icon: MessageCircle,
-    color: "#2563eb",
-    bgColor: "#dbeafe",
-    read: false,
-    action: "chat",
-  },
-  {
-    id: "3",
-    title: "Request Fulfilled",
-    message:
-      "Your groceries request has been marked as fulfilled. Thank you!",
-    time: "3 hours ago",
-    icon: CheckCircle,
-    color: "#16a34a",
-    bgColor: "#dcfce7",
-    read: true,
-    action: "recipient-my-requests",
-  },
-  {
-    id: "4",
-    title: "New NGO Campaign",
-    message:
-      "Winter Relief Drive 2024 is now active. 266 items available.",
-    time: "Yesterday",
-    icon: Calendar,
-    color: "#7c3aed",
-    bgColor: "#ede9fe",
-    read: true,
-    action: "ngo-events",
-  },
-  {
-    id: "5",
-    title: "Fresh Donations Nearby",
-    message: "3 new food donations added within 2 km",
-    time: "2 days ago",
-    icon: TrendingUp,
-    color: "#d97706",
-    bgColor: "#fef3c7",
-    read: true,
-    action: "browse-donations",
-  },
-];
+function iconMetaForType(type: string) {
+  if (type === "DONATION_REQUEST") {
+    return { Icon: Gift, color: "#16a34a", bgColor: "#dcfce7" };
+  }
+  if (type === "DONATION_REQUEST_STATUS") {
+    return { Icon: CheckCircle, color: "#2563eb", bgColor: "#dbeafe" };
+  }
+  return { Icon: MessageCircle, color: "#7c3aed", bgColor: "#ede9fe" };
+}
 
 export function RecipientNotifications({
   onNavigate,
 }: RecipientNotificationsProps) {
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
+  const router = useRouter();
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchNotifications(DEMO_REQUESTER_ID);
+      setItems(data);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const unreadCount = items.filter((n) => !n.isRead).length;
+
+  const openNotification = async (n: AppNotification) => {
+    try {
+      await markNotificationRead(DEMO_REQUESTER_ID, n.id);
+      setItems((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x))
+      );
+    } catch {
+      /* ignore */
+    }
+
+    if (n.relatedDonationId) {
+      onNavigate("browse-donations");
+      return;
+    }
+    if (n.type === "DONATION_REQUEST_STATUS") {
+      onNavigate("my-requests");
+      return;
+    }
+    onNavigate("browse-donations");
+  };
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Notifications</Text>
@@ -95,57 +93,53 @@ export function RecipientNotifications({
             </View>
           )}
         </View>
-        <Text style={styles.headerSub}>
-          Stay updated with available help
-        </Text>
+        <Text style={styles.headerSub}>Stay updated with available help</Text>
       </View>
 
-      {/* Notifications */}
       <View style={styles.list}>
-        {mockNotifications.map(item => {
-          const Icon = item.icon;
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.card,
-                !item.read && styles.unreadCard,
-              ]}
-              onPress={() => onNavigate(item.action)}
-            >
-              <View
-                style={[
-                  styles.iconBox,
-                  { backgroundColor: item.bgColor },
-                ]}
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color="#1A5F7A" />
+          </View>
+        ) : items.length === 0 ? (
+          <Text style={styles.empty}>No notifications yet.</Text>
+        ) : (
+          items.map((item) => {
+            const { Icon, color, bgColor } = iconMetaForType(item.type);
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.card, !item.isRead && styles.unreadCard]}
+                onPress={() => openNotification(item)}
               >
-                <Icon size={22} color={item.color} />
-              </View>
-
-              <View style={styles.content}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  {!item.read && <View style={styles.dot} />}
+                <View style={[styles.iconBox, { backgroundColor: bgColor }]}>
+                  <Icon size={22} color={color} />
                 </View>
 
-                <Text style={styles.message} numberOfLines={2}>
-                  {item.message}
-                </Text>
-                <Text style={styles.time}>{item.time}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                <View style={styles.content}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.title}>{item.title}</Text>
+                    {!item.isRead && <View style={styles.dot} />}
+                  </View>
+
+                  <Text style={styles.message} numberOfLines={2}>
+                    {item.message}
+                  </Text>
+                  <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </View>
 
-      {/* Quick Actions */}
       <View style={styles.quick}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         <View style={styles.row}>
           <TouchableOpacity
             style={styles.quickCard}
-            onPress={() => onNavigate("browse-donations")}
+            onPress={() => router.push("/browse-donations")}
           >
             <Gift size={28} color="#1A5F7A" />
             <Text style={styles.quickTitle}>Browse Help</Text>
@@ -165,6 +159,7 @@ export function RecipientNotifications({
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -202,6 +197,15 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 12,
+  },
+  loading: {
+    padding: 24,
+    alignItems: "center",
+  },
+  empty: {
+    textAlign: "center",
+    color: "#6b7280",
+    marginTop: 12,
   },
   card: {
     backgroundColor: "#fff",

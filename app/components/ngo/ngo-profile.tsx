@@ -1,43 +1,51 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Alert,
+  View, Text, ScrollView, StyleSheet,
+  TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  Edit,
-  Save,
-  Camera,
-} from "lucide-react-native";
+import { ArrowLeft, User, Mail, Phone, MapPin, Building, Edit, Save, Camera } from "lucide-react-native";
+import { apiFetch } from "../../lib/apiClient";
+import { clearToken } from "../../lib/token";
 
 export default function NGOProfileScreen() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: "Helping Hands NGO",
-    email: "contact@helpinghands.org",
-    phone: "+1 (555) 123-4567",
-    address: "123 Charity Street, Helping City, HC 12345",
-    description: "Dedicated to providing relief and support to communities in need through various charitable activities and programs.",
-    website: "www.helpinghands.org",
-    founded: "2015",
-    totalEvents: 45,
-    totalBeneficiaries: 12500,
+    name: "", email: "", phone: "", address: "",
+    description: "", website: "", founded: "",
+    totalDonations: 0, totalReceived: 0,
   });
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await apiFetch("/api/users/profile");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        const u = data.user;
+        setProfileData(prev => ({
+          ...prev,
+          name: u.name ?? "",
+          email: u.email ?? "",
+          phone: u.phone ?? "",
+          address: u.address ?? "",
+          description: u.bio ?? "",
+          totalDonations: u.totalDonations ?? 0,
+          totalReceived: u.totalReceived ?? 0,
+        }));
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   const handleSave = () => {
-    // In a real app, this would save to backend
     setIsEditing(false);
     Alert.alert("Success", "Profile updated successfully!");
   };
@@ -46,27 +54,40 @@ export default function NGOProfileScreen() {
     setProfileData({ ...profileData, [field]: value });
   };
 
+  const handleLogout = async () => {
+    await clearToken();
+    router.push("/login");
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1A5F7A" }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1A5F7A" }}>
+        <Text style={{ color: "#fff" }}>Failed to load profile</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NGO Profile</Text>
-        <TouchableOpacity
-          onPress={() => setIsEditing(!isEditing)}
-          style={styles.editButton}
-        >
+        <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editButton}>
           <Edit size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.profilePicture}>
             <User size={48} color="#1A5F7A" />
@@ -78,158 +99,88 @@ export default function NGOProfileScreen() {
           )}
         </View>
 
-        {/* Basic Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
-
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Organization Name</Text>
             {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={profileData.name}
-                onChangeText={(text) => handleInputChange("name", text)}
-              />
+              <TextInput style={styles.input} value={profileData.name} onChangeText={(t) => handleInputChange("name", t)} />
             ) : (
               <Text style={styles.fieldValue}>{profileData.name}</Text>
             )}
           </View>
-
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Email</Text>
-            {isEditing ? (
-              <View style={styles.inputWithIcon}>
-                <Mail size={20} color="#6b7280" style={styles.icon} />
-                <TextInput
-                  style={styles.inputWithIconText}
-                  value={profileData.email}
-                  onChangeText={(text) => handleInputChange("email", text)}
-                  keyboardType="email-address"
-                />
-              </View>
-            ) : (
-              <View style={styles.valueWithIcon}>
-                <Mail size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.email}</Text>
-              </View>
-            )}
+            <View style={styles.valueWithIcon}>
+              <Mail size={16} color="#6b7280" />
+              <Text style={styles.fieldValue}>{profileData.email}</Text>
+            </View>
           </View>
-
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Phone</Text>
             {isEditing ? (
               <View style={styles.inputWithIcon}>
                 <Phone size={20} color="#6b7280" style={styles.icon} />
-                <TextInput
-                  style={styles.inputWithIconText}
-                  value={profileData.phone}
-                  onChangeText={(text) => handleInputChange("phone", text)}
-                  keyboardType="phone-pad"
-                />
+                <TextInput style={styles.inputWithIconText} value={profileData.phone} onChangeText={(t) => handleInputChange("phone", t)} keyboardType="phone-pad" />
               </View>
             ) : (
               <View style={styles.valueWithIcon}>
                 <Phone size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.phone}</Text>
+                <Text style={styles.fieldValue}>{profileData.phone || "Not set"}</Text>
               </View>
             )}
           </View>
-
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Address</Text>
             {isEditing ? (
               <View style={styles.inputWithIcon}>
                 <MapPin size={20} color="#6b7280" style={styles.icon} />
-                <TextInput
-                  style={styles.inputWithIconText}
-                  value={profileData.address}
-                  onChangeText={(text) => handleInputChange("address", text)}
-                  multiline
-                  numberOfLines={2}
-                />
+                <TextInput style={styles.inputWithIconText} value={profileData.address} onChangeText={(t) => handleInputChange("address", t)} multiline numberOfLines={2} />
               </View>
             ) : (
               <View style={styles.valueWithIcon}>
                 <MapPin size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.address}</Text>
+                <Text style={styles.fieldValue}>{profileData.address || "Not set"}</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Description</Text>
           {isEditing ? (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={profileData.description}
-              onChangeText={(text) => handleInputChange("description", text)}
-              multiline
-              numberOfLines={4}
-            />
+            <TextInput style={[styles.input, styles.textArea]} value={profileData.description} onChangeText={(t) => handleInputChange("description", t)} multiline numberOfLines={4} />
           ) : (
-            <Text style={styles.descriptionText}>{profileData.description}</Text>
+            <Text style={styles.descriptionText}>{profileData.description || "No description yet"}</Text>
           )}
         </View>
 
-        {/* Additional Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
-
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Website</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={profileData.website}
-                onChangeText={(text) => handleInputChange("website", text)}
-                keyboardType="url"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.website}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Founded</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={profileData.founded}
-                onChangeText={(text) => handleInputChange("founded", text)}
-                keyboardType="numeric"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{profileData.founded}</Text>
-            )}
-          </View>
-        </View>
-
-        {/* Statistics */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Impact Statistics</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Building size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>{profileData.totalEvents}</Text>
-              <Text style={styles.statLabel}>Total Events</Text>
+              <Text style={styles.statValue}>{profileData.totalDonations}</Text>
+              <Text style={styles.statLabel}>Total Donations</Text>
             </View>
             <View style={styles.statCard}>
               <User size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>{profileData.totalBeneficiaries}</Text>
-              <Text style={styles.statLabel}>Beneficiaries</Text>
+              <Text style={styles.statValue}>{profileData.totalReceived}</Text>
+              <Text style={styles.statLabel}>Total Received</Text>
             </View>
           </View>
         </View>
 
-        {/* Save Button */}
         {isEditing && (
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Save size={24} color="#fff" />
             <Text style={styles.saveButtonText}>Save Changes</Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -412,4 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 8,
   },
+  logoutBtn: { padding: 16, alignItems: "center", marginBottom: 40 },
+  logoutText: { color: "#fee2e2", fontSize: 16, fontWeight: "600" },
+
 });

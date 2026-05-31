@@ -1,23 +1,20 @@
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Users,
-  Package,
-  TrendingUp,
   AlertTriangle,
-  Settings,
-  BarChart3,
-  Shield,
   LogOut,
+  Package,
+  Shield,
+  TrendingUp,
   User,
+  Users
 } from "lucide-react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -52,11 +49,12 @@ export default function AdminDashboardScreen() {
       },
     ],
   };
-
-  const handleLogout = () => {
-    // In a real app, this would clear authentication tokens
-    router.push("/");
-  };
+const handleLogout = async () => {
+  const { clearToken } = await import("./lib/token");
+  await clearToken();
+  router.push("/login");
+};
+  
 
   return (
     <View style={styles.container}>
@@ -138,12 +136,12 @@ export default function AdminDashboardScreen() {
               <Text style={styles.actionText}>Handle Reports</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => (router.push as any)("/analytics-reports")}
-            >
-              <BarChart3 size={24} color="#8B5CF6" />
-              <Text style={styles.actionText}>Analytics</Text>
-            </TouchableOpacity>
+  style={styles.actionButton}
+  onPress={() => (router.push as any)("/adminNgoReview")}
+>
+  <Shield size={24} color="#8B5CF6" />
+  <Text style={styles.actionText}>NGO Reviews</Text>
+</TouchableOpacity>
           </View>
         </View>
 

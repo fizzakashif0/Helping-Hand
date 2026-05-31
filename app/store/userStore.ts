@@ -1,4 +1,4 @@
-type UserRole = "donor" | "recipient" | "ngo" | null;
+export type UserRole = "donor" | "recipient" | "ngo" | null;
 
 let userRole: UserRole = null;
 
@@ -21,3 +21,5 @@ export function subscribeToUserRole(fn: Subscriber): () => void {
     if (idx >= 0) subscribers.splice(idx, 1);
   };
 }
+export default {};
+

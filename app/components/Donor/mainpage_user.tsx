@@ -1,43 +1,32 @@
 
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
 import {
-  ArrowRight,
-  Bell,
-  Heart,
-  MapPin,
-  TrendingUp
+    ArrowRight,
+    Bell,
+    Heart,
+    MapPin,
+    TrendingUp
 } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
+import {
+  DonationRecord,
+  fetchAvailableDonationsDetached,
+  fetchBrowseDonationsDetached,
+} from "../../store/donationStore";
 import styles from "../../styles/MainStyle";
 import BottomNav, { NavItem } from "../Navbar";
 import DonationFeed from "./DonationFeed";
 interface DonorHomeProps {
   onNavigate: (screen: string) => void;
 }
-
-const mockNearbyRequests = [
-  {
-    id: "1",
-    type: "Food",
-    title: "Food for 20 families",
-    location: "2.3 km away",
-    urgency: "high",
-  },
-  {
-    id: "2",
-    type: "Clothes",
-    title: "Winter clothes needed",
-    location: "3.5 km away",
-    urgency: "medium",
-  },
-];
 
 const mockActiveEvents = [
   {
@@ -62,6 +51,40 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavItem>("home");
   const [feedModalVisible, setFeedModalVisible] = useState(false);
+  const [nearbyRequests, setNearbyRequests] = useState<DonationRecord[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  const loadNearbyRequests = useCallback(async () => {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status === "granted") {
+        const pos = await Location.getCurrentPositionAsync({});
+        const result = await fetchBrowseDonationsDetached(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          50
+        );
+        setNearbyRequests(result.slice(0, 3));
+      } else {
+        const fallback = await fetchAvailableDonationsDetached();
+        setNearbyRequests(fallback.slice(0, 3));
+      }
+    } catch (error) {
+      console.error("Failed to load nearby requests:", error);
+      try {
+        const fallback = await fetchAvailableDonationsDetached();
+        setNearbyRequests(fallback.slice(0, 3));
+      } catch (fallbackError) {
+        console.error("Fallback nearby requests fetch failed:", fallbackError);
+      }
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNearbyRequests();
+  }, [loadNearbyRequests]);
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -117,7 +140,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
 
       {/* NGO Events */}
       <SectionHeader
-        title="Active NGO Events"
+        title="vents"
         onPress={() => onNavigate("ngo-events")}
       />
 
@@ -154,36 +177,50 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         onPress={() => router.push("/donation-feed")}
       />
 
-      {mockNearbyRequests.map((request) => (
+      {loadingRequests && (
+        <Text style={styles.cardSub}>Loading nearby requests...</Text>
+      )}
+
+      {!loadingRequests && nearbyRequests.map((donation) => {
+        const urgency =
+          donation.status === "pending"
+            ? "high"
+            : donation.status === "in-progress"
+            ? "medium"
+            : "low";
+        const type = donation.type.charAt(0).toUpperCase() + donation.type.slice(1);
+
+        return (
         <TouchableOpacity
-          key={request.id}
+          key={donation.id}
           style={styles.card}
-          onPress={() => onNavigate(`donation-details-${request.id}`)}
+          onPress={() => onNavigate(`donation-details-${donation.id}`)}
         >
           <View style={styles.badgeRow}>
             <View
               style={[
                 styles.badge,
-                request.urgency === "high"
+                urgency === "high"
                   ? styles.badgeRed
                   : styles.badgeYellow,
               ]}
             >
               <Text style={styles.badgeText}>
-                {request.urgency === "high" ? "Urgent" : "Medium"}
+                {urgency === "high" ? "Urgent" : urgency === "medium" ? "Medium" : "Low"}
               </Text>
             </View>
-            <Text style={styles.typeText}>{request.type}</Text>
+            <Text style={styles.typeText}>{type}</Text>
           </View>
 
-          <Text style={styles.cardTitle}>{request.title}</Text>
+          <Text style={styles.cardTitle}>{donation.title}</Text>
 
           <View style={styles.locationRow}>
             <MapPin size={14} color="#ffffffaa" />
-            <Text style={styles.locationText}>{request.location}</Text>
+            <Text style={styles.locationText}>{donation.location}</Text>
           </View>
         </TouchableOpacity>
-      ))}
+      );
+      })}
 
       {/* Impact */}
       <View style={styles.impactCard}>

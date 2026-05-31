@@ -11,10 +11,7 @@ export default function BrowseDonationsPage() {
   return (
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <BrowseDonations 
-        onBack={() => router.back()} 
-        onNavigate={(screen) => console.log("Navigate to:", screen)} 
-      />
+      <BrowseDonations onBack={() => router.back()} />
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </View>
   );

@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import {
     ArrowRight,
@@ -7,7 +8,7 @@ import {
     Search,
     Shield
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -17,7 +18,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { DonationRecord, fetchAllDonations } from "../../store/donationStore";
+import { DEMO_REQUESTER_ID } from "../../lib/donations";
+import {
+    DonationRecord,
+    fetchAvailableDonationsDetached,
+    fetchBrowseDonationsDetached,
+} from "../../store/donationStore";
+import { fetchUnreadNotificationCount } from "../../store/notificationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
 interface RecipientHomeProps {
@@ -34,27 +41,55 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
   const [activeTab, setActiveTab] = useState<NavItem>("home");
   const [nearbyDonations, setNearbyDonations] = useState<DonationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notifCount, setNotifCount] = useState(0);
 
-  useEffect(() => {
-    loadNearbyDonations();
-  }, []);
-
-  const loadNearbyDonations = async () => {
+  const loadNearbyDonations = useCallback(async () => {
     setLoading(true);
     try {
-      // For now, fetch all donations (you can replace with actual geolocation later)
-      // const lat = 31.5497; // Example: Lahore coordinates
-      // const lng = 74.3436;
-      // const donations = await fetchNearbyDonations(lat, lng);
-      
-      const donations = await fetchAllDonations();
-      setNearbyDonations(donations);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const donations = await fetchAvailableDonationsDetached();
+        setNearbyDonations(donations);
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      const rows = await fetchBrowseDonationsDetached(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        50
+      );
+      setNearbyDonations(rows);
     } catch (error) {
       console.error("Failed to load nearby donations:", error);
+      try {
+        const donations = await fetchAvailableDonationsDetached();
+        setNearbyDonations(donations);
+      } catch {
+        setNearbyDonations([]);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadNearbyDonations();
+  }, [loadNearbyDonations]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const n = await fetchUnreadNotificationCount(DEMO_REQUESTER_ID);
+        if (!cancelled) setNotifCount(n);
+      } catch {
+        if (!cancelled) setNotifCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,9 +108,11 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
               onPress={() => router.push("/recipient-notifications")}
             >
               <Bell size={24} color="white" />
-              <View style={styles.badgeCount}>
-                <Text style={styles.badgeText}>2</Text>
-              </View>
+              {notifCount > 0 ? (
+                <View style={styles.badgeCount}>
+                  <Text style={styles.badgeText}>{notifCount > 99 ? "99+" : notifCount}</Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           </View>
 
@@ -144,7 +181,7 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
           </View>
         ) : nearbyDonations.length > 0 ? (
           nearbyDonations.map((donation) => (
-            <TouchableOpacity key={donation.id} style={styles.card} onPress={() => onNavigate(`recipient-donation-details-${donation.id}`)}>
+            <TouchableOpacity key={donation.id} style={styles.card} onPress={() => router.push(`/recipient-donation/${donation.id}`)}>
               <View style={styles.badgeRow}>
                 <View style={styles.typeBadge}><Text style={styles.typeBadgeText}>{donation.type.toUpperCase()}</Text></View>
                 <Text style={styles.locationText}>{donation.location}</Text>
