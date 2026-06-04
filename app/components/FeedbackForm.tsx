@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import axios from "axios";
-
-// TODO: move to .env when configured
-const API_BASE_URL = "http://localhost:5000";
+import api from "../services/chatApi";
 
 interface FeedbackFormProps {
   visible: boolean;
@@ -61,7 +58,7 @@ export default function FeedbackForm({
 
     try {
       setLoading(true);
-      await axios.post(`${API_BASE_URL}/api/reviews`, {
+      await api.post("/api/reviews", {
         donationId,
         revieweeId,
         role,
@@ -91,12 +88,9 @@ export default function FeedbackForm({
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Overlay */}
         <View style={styles.overlay} />
 
-        {/* Modal Content */}
         <View style={styles.modalContent}>
-          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onDismiss} disabled={submitted}>
               <MaterialIcons name="close" size={24} color="#666" />
@@ -106,7 +100,6 @@ export default function FeedbackForm({
           </View>
 
           {submitted ? (
-            // Success message
             <View style={styles.successContainer}>
               <MaterialIcons name="check-circle" size={60} color="#31a24c" />
               <Text style={styles.successText}>
@@ -117,7 +110,6 @@ export default function FeedbackForm({
               </Text>
             </View>
           ) : (
-            // Review form
             <View style={styles.formContainer}>
               <TextInput
                 style={styles.input}
@@ -259,3 +251,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+

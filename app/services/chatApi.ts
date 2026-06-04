@@ -1,27 +1,27 @@
-import axios from "axios";
-import * as SecureStore from "expo-secure-store";
+import api, { api as apiClient } from "./api";
+import { getToken } from "../lib/token";
 
-// TODO: move to .env when configured
-const API_BASE_URL = "http://localhost:5000";
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-});
-
-// Axios interceptor to add JWT token (when auth is complete)
-// TODO: add Bearer token when JWT is complete
+// Axios interceptor to add JWT token to every request
 apiClient.interceptors.request.use(
   async (config) => {
-    // Placeholder: will add JWT token here when auth is implemented
-    // const token = await SecureStore.getItemAsync("jwtToken");
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    try {
+      // Project uses AsyncStorage auth token
+      const token = await getToken();
+      if (token) {
+        config.headers = config.headers || {};
+        // Prefer Authorization: Bearer <token>
+        (config.headers as any).Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      // Do not hard-fail requests if auth token cannot be read
+      console.warn("chatApi interceptor: failed to read token", e);
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
+
 
 /**
  * Get all chat threads for the authenticated user
@@ -90,3 +90,4 @@ export const getMessages = async (threadId: string, userId: string) => {
 };
 
 export default apiClient;
+

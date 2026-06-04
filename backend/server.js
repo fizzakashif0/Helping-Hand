@@ -46,8 +46,9 @@ const chatRoutes = require("./modules/chats/routes");
 const messageRoutes = require("./modules/messages/routes");
 const chatRequestRoutes = require("./modules/chatRequests/routes");
 const adminRoutes = require('./modules/admin/routes');
+const reviewRoutes = require('./modules/reviews/routes');
 
-
+app.use('/api/reviews', reviewRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/donations", donationRoutes);
@@ -67,8 +68,12 @@ app.use("/api/chat-requests", chatRequestRoutes);
 const http = require("http");
 const initializeSocket = require("./socket");
 
+const { createReviewWorker } = require('./modules/reviews/reviewWorker')
+
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
-initializeSocket(server);
+const io = initializeSocket(server);
+createReviewWorker(io);
 
 server.listen(PORT, () => console.log(`server is running on port ${PORT}`));
+

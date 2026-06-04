@@ -14,8 +14,13 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as socketService from "../services/socketService";
 import * as chatApi from "../services/chatApi";
+import { getToken } from "../lib/token";
+import { jwtDecode } from "jwt-decode";
+import FeedbackForm from "../components/FeedbackForm";
+
 import ChatBubble from "../components/ChatBubble";
 import TypingIndicator from "../components/TypingIndicator";
+
 
 interface Message {
   _id: string;
@@ -39,37 +44,71 @@ export default function ChatScreen() {
   const [thread, setThread] = useState<Thread | null>(null);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string>("user123"); // TODO: Get from storage
+  const [userId, setUserId] = useState<string>("");
+
   const [isTyping, setIsTyping] = useState(false);
-  const [otherUserId, setOtherUserId] = useState<string>("");
+
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<{
+    donationId: string;
+    revieweeId: string;
+    role: "donor" | "recipient";
+  } | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    fetchThread();
-    connectSocket();
+    const init = async () => {
+      try {
+        const token = await getToken();
+        if (!token) {
+          console.warn("ChatScreen: missing auth token");
+          return;
+        }
+        const decoded: any = jwtDecode(token);
+        const uid = decoded?.sub || decoded?.id;
+        if (!uid) {
+          console.warn("ChatScreen: unable to decode userId from JWT");
+          return;
+        }
+        setUserId(uid);
+
+        await fetchThread(uid);
+        connectSocket();
+      } catch (e) {
+        console.error("ChatScreen init error:", e);
+      }
+    };
+
+    init();
+
     return () => {
       socketService.offNewMessage();
       socketService.offTyping();
       socketService.offStopTyping();
+      socketService.offRequestFeedback();
       socketService.disconnectSocket();
     };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchThread = async () => {
+  const fetchThread = async (uid: string) => {
     try {
       setLoading(true);
-      const data = await chatApi.getThreadById(threadId as string, userId);
+      const data = await chatApi.getThreadById(threadId as string, uid);
+
       setThread(data);
 
-      // Determine other user
-      const otherUser =
-        data.donorId._id === userId ? data.recipientId : data.donorId;
-      setOtherUserId(otherUser._id);
+      // Determine other user (not stored locally)
+      const otherUser = data.donorId._id === uid ? data.recipientId : data.donorId;
 
       // Fetch messages
-      const messagesData = await chatApi.getMessages(threadId as string, userId);
+      const messagesData = await chatApi.getMessages(threadId as string, uid);
+
       setMessages(messagesData);
+
 
       // Mark as read
       socketService.markRead(threadId as string);
@@ -80,11 +119,21 @@ export default function ChatScreen() {
     }
   };
 
+  const onRequestFeedback = (data: any) => {
+    setFeedbackData({
+      donationId: data.donationId,
+      revieweeId: data.revieweeId,
+      role: data.role,
+    });
+    setShowFeedback(true);
+  };
+
   const connectSocket = () => {
-    socketService.connectSocket(userId);
+    socketService.connectSocket();
 
     // Join thread and get history
     socketService.joinThread(threadId as string);
+
 
     // Listen for new messages
     socketService.onNewMessage((message) => {
@@ -104,9 +153,15 @@ export default function ChatScreen() {
         setIsTyping(false);
       }
     });
+
+    socketService.onRequestFeedback(onRequestFeedback);
   };
 
-  const handleSendMessage = () => {
+  const onSubmitSuccess = () => {
+    // no-op (FeedbackForm manages UI)
+  };
+
+  const handleSendMessage = () => { 
     if (!inputText.trim()) return;
 
     socketService.sendMessage(threadId as string, inputText.trim());
@@ -149,6 +204,7 @@ export default function ChatScreen() {
     return (
       <>
         {showDateSeparator && (
+
           <View style={styles.dateSeparator}>
             <Text style={styles.dateSeparatorText}>
               {new Date(item.createdAt).toLocaleDateString()}
@@ -217,6 +273,7 @@ export default function ChatScreen() {
 
       {/* Input Bar or Closed Banner */}
       {thread?.status === "active" ? (
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -252,9 +309,23 @@ export default function ChatScreen() {
           </Text>
         </View>
       )}
-    </KeyboardAvoidingView>
+        <FeedbackForm
+          visible={showFeedback}
+          donationId={feedbackData?.donationId ?? ""}
+          revieweeId={feedbackData?.revieweeId ?? ""}
+          userId={userId}
+          role={feedbackData?.role ?? "donor"}
+          onDismiss={() => {
+            setShowFeedback(false);
+            setFeedbackData(null);
+          }}
+          onSubmitSuccess={onSubmitSuccess}
+
+        />
+      </KeyboardAvoidingView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

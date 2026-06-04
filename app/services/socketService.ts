@@ -1,23 +1,33 @@
 import { io } from "socket.io-client";
+import { getToken } from "../lib/token";
+import { jwtDecode } from "jwt-decode";
 
 // TODO: move to .env when configured
 const API_URL = "http://localhost:5000";
 
 let socket: any = null;
 
-export const connectSocket = async (userId: string) => {
+export const connectSocket = async () => {
   try {
-    // For now, accept userId directly in handshake auth
-    // TODO: plug in real JWT token when auth is complete
+    const token = await getToken();
+    if (!token) {
+      throw new Error("Missing auth token for socket connection");
+    }
+
+    const decoded: any = jwtDecode(token);
+    const userId = decoded?.sub || decoded?.id;
+    if (!userId) {
+      throw new Error("Unable to decode userId from JWT");
+    }
+
     socket = io(API_URL, {
-      auth: {
-        userId,
-      },
+      auth: { token },
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
     });
+
 
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
@@ -166,3 +176,20 @@ export const offMessagesRead = () => {
     socket.off("messages_read");
   }
 };
+
+export const onRequestFeedback = (callback: (data: any) => void) => {
+  if (!socket) {
+    console.error("Socket not connected");
+    return;
+  }
+
+  socket.on("request_feedback", callback);
+};
+
+export const offRequestFeedback = () => {
+  if (socket) {
+    socket.off("request_feedback");
+  }
+};
+
+

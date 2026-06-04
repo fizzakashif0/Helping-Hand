@@ -13,6 +13,10 @@ import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as chatApi from "../services/chatApi";
+import { getToken } from "../lib/token";
+import { jwtDecode } from "jwt-decode";
+
+
 
 interface Thread {
   _id: string;
@@ -39,15 +43,24 @@ export default function ChatListScreen() {
   const [searchText, setSearchText] = useState("");
   const [userId, setUserId] = useState<string>("");
 
-  // In production, get userId from AsyncStorage/JWT
-  // For now, hardcode or get from navigation params
   useEffect(() => {
-    // TODO: Get userId from secure storage when JWT is implemented
-    const id = "user123"; // Placeholder
-    setUserId(id);
-    fetchThreads(id);
-    fetchPendingRequests(id);
+    const init = async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const decoded: any = jwtDecode(token);
+        const id = decoded?.sub || decoded?.id;
+        if (!id) return;
+        setUserId(id);
+        await fetchThreads(id);
+        await fetchPendingRequests(id);
+      } catch (e) {
+        console.error("Failed to init ChatListScreen userId:", e);
+      }
+    };
+    init();
   }, []);
+
 
   const fetchThreads = async (uid: string) => {
     try {
@@ -62,11 +75,13 @@ export default function ChatListScreen() {
   };
 
   const onRefresh = async () => {
+    if (!userId) return;
     setRefreshing(true);
     await fetchThreads(userId);
     await fetchPendingRequests(userId);
     setRefreshing(false);
   };
+
 
   const fetchPendingRequests = async (uid: string) => {
     try {

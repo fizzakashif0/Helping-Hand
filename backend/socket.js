@@ -1,6 +1,8 @@
 const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 const Message = require("./modules/messages/model");
 const ChatThread = require("./modules/chats/chatThreadModel");
+
 
 function initializeSocket(server) {
   const io = new Server(server, {
@@ -12,17 +14,30 @@ function initializeSocket(server) {
 
   io.use((socket, next) => {
     try {
-      // For now, accept userId directly from handshake auth
-      const userId = socket.handshake.auth.userId;
-      if (!userId) {
-        return next(new Error("userId is required in socket handshake"));
+      const token = socket.handshake?.auth?.token;
+      if (!token) {
+        return next(new Error("token is required in socket handshake auth"));
       }
+
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        return next(new Error("Server misconfiguration: JWT_SECRET is not set"));
+      }
+
+      const decoded = jwt.verify(token, secret);
+      const userId = decoded?.sub || decoded?.id;
+      if (!userId) {
+        return next(new Error("Unable to decode userId from JWT"));
+      }
+
       socket.userId = userId;
       next();
     } catch (error) {
       next(error);
     }
   });
+
+
 
   io.on("connection", (socket) => {
     console.log(`User ${socket.userId} connected with socket ${socket.id}`);
@@ -224,7 +239,24 @@ function emitDonationCompleted(io, donorId, recipientId, donationId) {
     donationId,
     message: "Donation completed. Chat is now closed.",
   });
+
+  // Request feedback from both donor and recipient
+  io.to(donorId).emit("request_feedback", {
+    threadId: donationId,
+    donationId,
+    revieweeId: recipientId,
+    role: "donor",
+  });
+
+  io.to(recipientId).emit("request_feedback", {
+    threadId: donationId,
+    donationId,
+    revieweeId: donorId,
+    role: "recipient",
+  });
 }
+
+
 
 module.exports = initializeSocket;
 module.exports.emitDonationCompleted = emitDonationCompleted;

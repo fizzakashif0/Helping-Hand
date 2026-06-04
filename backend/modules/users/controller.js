@@ -1,4 +1,6 @@
 const { selectRole, updateProfile, getProfile } = require('./service');
+const User = require('./model');
+
 
 function asyncHandler(fn) {
   return (req, res) => {
@@ -39,4 +41,16 @@ exports.getProfile = asyncHandler(async (req, res) => {
   const user = await getProfile({ userId });
   return res.status(200).json({ user });
 });
+
+exports.getTrustScore = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('trustScore');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    return res.json({ score: user.trustScore ?? 0 });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
 

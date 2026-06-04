@@ -20,98 +20,137 @@ import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { apiFetch } from "../../lib/apiClient";
 import { clearToken } from "../../lib/token";
+import api from "../../services/chatApi";
 
 interface Props {
-onNavigate: (screen: string) => void;
+  onNavigate: (screen: string) => void;
 }
 
 export default function RecipientProfile({ onNavigate }: Props) {
-const router = useRouter();
-const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState<{ _id?: string; id?: string; name: string; email: string } | null>(null);
+  const [trustScore, setTrustScore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const response = await apiFetch("/api/users/profile");
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      setUser(data.user);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await apiFetch("/api/users/profile");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        setUser(data.user);
+
+        const uid = data?.user?._id || data?.user?.id;
+        if (uid) {
+          try {
+            const trustRes = await api.get(`/api/users/${uid}/trust-score`);
+            const score =
+              typeof trustRes?.data?.score === "number" ? trustRes.data.score : 0;
+            setTrustScore(score);
+          } catch {
+            // silently skip on trust score failure
+          }
+        }
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await clearToken();
+    router.push("/login");
   };
-  fetchProfile();
-}, []);
 
-const handleLogout = async () => {
-  await clearToken();
-  router.push("/login");
-};
+  const menu = [
+    { label: "Edit Profile", icon: User, screen: "edit-profile" },
+    { label: "Account Settings", icon: Settings, screen: "account-settings" },
+    { label: "Notifications", icon: Bell, screen: "notifications" },
+    { label: "Privacy & Security", icon: Shield, screen: "privacy" },
+    { label: "Help & Support", icon: HelpCircle, screen: "help" },
+    { label: "About", icon: Info, screen: "about" },
+  ];
 
-const menu = [
-  { label: "Edit Profile", icon: User, screen: "edit-profile" },
-  { label: "Account Settings", icon: Settings, screen: "account-settings" },
-  { label: "Notifications", icon: Bell, screen: "notifications" },
-  { label: "Privacy & Security", icon: Shield, screen: "privacy" },
-  { label: "Help & Support", icon: HelpCircle, screen: "help" },
-  { label: "About", icon: Info, screen: "about" },
-];
-
-if (loading) {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size="large" color="#1A5F7A" />
-    </View>
-  );
-}
-
-if (error) {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text style={{ color: "red" }}>Failed to load profile</Text>
-    </View>
-  );
-}
-
-return (
-  <ScrollView style={styles.container}>
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>Profile</Text>
-      <Text style={styles.headerSub}>Manage your account</Text>
-    </View>
-
-    <View style={styles.profileCard}>
-      <View style={styles.avatar}>
-        <User color="white" size={40} />
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#1A5F7A" />
       </View>
-      <Text style={styles.name}>{user?.name}</Text>
-      <Text style={styles.email}>{user?.email}</Text>
-      <TouchableOpacity style={styles.editBtn} onPress={() => onNavigate("edit-profile")}>
-        <Text style={styles.editText}>Edit Profile</Text>
-      </TouchableOpacity>
-    </View>
+    );
+  }
 
-    <View style={styles.menu}>
-      {menu.map((item, index) => (
-        <TouchableOpacity key={index} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
-          <item.icon color="#1A5F7A" />
-          <Text style={styles.menuText}>{item.label}</Text>
-          <ChevronRight color="gray" />
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: "red" }}>Failed to load profile</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerSub}>Manage your account</Text>
+      </View>
+
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <User color="white" size={40} />
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={styles.name}>{user?.name}</Text>
+          {trustScore !== null && (
+            <Text style={styles.trustBadge}>⭐ Trust Score: {trustScore}/100</Text>
+          )}
+        </View>
+
+        <Text style={styles.email}>{user?.email}</Text>
+
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={() => onNavigate("edit-profile")}
+        >
+          <Text style={styles.editText}>Edit Profile</Text>
         </TouchableOpacity>
-      ))}
-    </View>
+      </View>
 
-    <TouchableOpacity style={styles.logout} onPress={handleLogout}>
-      <LogOut color="red" />
-      <Text style={styles.logoutText}>Logout</Text>
-    </TouchableOpacity>
-  </ScrollView>
-);
+      <View style={styles.menu}>
+        {menu.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={() => onNavigate(item.screen)}
+          >
+            <item.icon color="#1A5F7A" />
+            <Text style={styles.menuText}>{item.label}</Text>
+            <ChevronRight color="gray" />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <TouchableOpacity style={styles.logout} onPress={handleLogout}>
+        <LogOut color="red" />
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
   header: {
@@ -140,7 +179,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   name: { fontSize: 18, fontWeight: "600" },
-  email: { color: "gray", marginBottom: 12 },
+  trustBadge: { fontSize: 12, color: "#1D4ED8", fontWeight: "600" },
+  email: { color: "gray", marginBottom: 12, textAlign: "center" },
 
   editBtn: {
     backgroundColor: "#1A5F7A",
@@ -173,6 +213,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 10,
+    alignItems: "center",
   },
   logoutText: { color: "red", fontWeight: "600" },
 });
+
