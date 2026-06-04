@@ -90,9 +90,7 @@ async function registerUser({ name, email, password }) {
 
   return {
     user: toPublicUser(user),
-    requiresEmailVerification: true,
-    message: 'Registration successful. Please check your email to verify your account.',
-    ...(mailResult.sent ? {} : { verificationUrl: mailResult.verifyUrl }),
+    message: 'Registration successful',
   };
 }
 
@@ -112,11 +110,12 @@ async function loginUser({ email, password }) {
     throw err;
   }
 
-  if (user.authProvider === 'local' && !user.isVerified) {
-    const err = new Error('Please verify your email before logging in');
-    err.statusCode = 403;
-    throw err;
-  }
+  // Email verification gate removed to allow login without verified email (regression fix).
+  // if (user.authProvider === 'local' && !user.isVerified) {
+  //   const err = new Error('Please verify your email before logging in');
+  //   err.statusCode = 403;
+  //   throw err;
+  // }
 
   const ok = await comparePassword(password, user.password);
   if (!ok) {
