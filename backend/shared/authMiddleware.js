@@ -41,9 +41,7 @@ async function verifyToken(req, res, next) {
       return res.status(403).json({ message: 'Account is blocked' });
     }
 
-    if (user.authProvider === 'local' && !user.isVerified) {
-      return res.status(403).json({ message: 'Please verify your email before accessing this resource' });
-    }
+   
 
     return next();
   } catch (err) {

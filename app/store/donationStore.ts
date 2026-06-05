@@ -6,6 +6,8 @@ export type DonationRecord = {
   type: "clothes" | "food" | "blood" | "financial";
   title: string;
   recipientName: string;
+  recipientId?: string;  // ← added
+  donorId?: string;      // ← added
   amount?: string;
   date: string;
   location: string;
@@ -65,18 +67,9 @@ const subscribers: Subscriber[] = [];
 const API_URL = buildApiUrl("/api/donations");
 
 function mapBackendStatus(status: string): DonationRecord["status"] {
-  if (status === "completed") {
-    return "completed";
-  }
-
-  if (status === "available" || status === "pending") {
-    return "pending";
-  }
-
-  if (status === "matched") {
-    return "in-progress";
-  }
-
+  if (status === "completed") return "completed";
+  if (status === "available" || status === "pending") return "pending";
+  if (status === "matched") return "in-progress";
   return "in-progress";
 }
 
@@ -90,18 +83,55 @@ function mapBackendDonation(d: any, fallbackName: string): DonationRecord {
     d.location?.address ||
     "Nearby";
 
+  // donorId — backend stores as `donor` field, toPublicDonation now exposes as `donorId`
+  const donorId: string | undefined =
+    d.donorId
+      ? String(d.donorId)
+      : d.donor?._id
+      ? String(d.donor._id)
+      : d.donor
+      ? String(d.donor)
+      : undefined;
+
+  // recipientId — requests model stores recipient as `requester` field
+  const recipientId: string | undefined =
+    d.requester?._id
+      ? String(d.requester._id)
+      : d.requester
+      ? String(d.requester)
+      : d.recipientId?._id
+      ? String(d.recipientId._id)
+      : d.recipientId
+      ? String(d.recipientId)
+      : d.recipient?._id
+      ? String(d.recipient._id)
+      : d.recipient
+      ? String(d.recipient)
+      : undefined;
+
   return {
     id: String(d._id),
     type: fromBackendDonationType(d.type),
     title,
-    recipientName: fallbackName,
+    recipientName:
+      d.recipientId?.name ||
+      d.recipient?.name ||
+      d.donorId?.name ||
+      fallbackName,
+    recipientId,
+    donorId,
     amount: d.quantityText,
-    date: dateSrc ? new Date(dateSrc).toLocaleDateString() : new Date().toLocaleDateString(),
+    date: dateSrc
+      ? new Date(dateSrc).toLocaleDateString()
+      : new Date().toLocaleDateString(),
     location: landmark,
     status: mapBackendStatus(d.status || "available"),
-    imageUrl: Array.isArray(d.images) && d.images[0] ? d.images[0] : undefined,
-    distanceKm: typeof d.distanceKm === "number" ? d.distanceKm : undefined,
-    shortDescription: d.shortDescription || desc.split("\n").slice(1).join("\n").trim(),
+    imageUrl:
+      Array.isArray(d.images) && d.images[0] ? d.images[0] : undefined,
+    distanceKm:
+      typeof d.distanceKm === "number" ? d.distanceKm : undefined,
+    shortDescription:
+      d.shortDescription || desc.split("\n").slice(1).join("\n").trim(),
     postedAtIso: dateSrc ? new Date(dateSrc).toISOString() : undefined,
   };
 }
@@ -118,6 +148,8 @@ export function addDonation(d: Omit<DonationRecord, "id"> | DonationRecord) {
     type: d.type,
     title: d.title,
     recipientName: d.recipientName,
+    recipientId: d.recipientId,
+    donorId: d.donorId,
     amount: d.amount,
     date: d.date,
     location: d.location,
@@ -177,9 +209,7 @@ export async function fetchUserDonations(donorId: string) {
     const response = await apiFetch(`/api/donations/donor/${donorId}`, { userId: donorId });
     if (!response.ok) throw new Error("Failed to fetch user donations");
     const data = await response.json();
-
     const converted = data.map((d: any) => mapBackendDonation(d, "Recipients"));
-
     donations = converted;
     notifySubscribers();
     return converted;
@@ -189,7 +219,7 @@ export async function fetchUserDonations(donorId: string) {
   }
 }
 
-/** Public listing without mutating in-memory donor cache (e.g. recipient browse fallbacks). */
+/** Public listing without mutating in-memory donor cache. */
 export async function fetchAvailableDonationsDetached(): Promise<DonationRecord[]> {
   const response = await fetch(API_URL);
   if (!response.ok) {
@@ -200,6 +230,81 @@ export async function fetchAvailableDonationsDetached(): Promise<DonationRecord[
   }
   const data = await response.json();
   return data.map((d: any) => mapBackendDonation(d, "Nearby donor"));
+}
+
+/** Fetch help requests near donor — for DonationFeed (donor side). */
+export async function fetchNearbyRequestsDetached(
+  lat: number,
+  lng: number
+): Promise<DonationRecord[]> {
+  const url = buildApiUrl(`/api/requests/nearby/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Requests API ${response.status}: ${detail.slice(0, 200) || response.statusText}`
+    );
+  }
+  const data = await response.json();
+  return data.map((d: any) => mapBackendRequest(d));
+}
+
+/** Fallback — all pending requests without location filter. */
+export async function fetchAllRequestsDetached(): Promise<DonationRecord[]> {
+  const url = buildApiUrl("/api/requests");
+  const response = await fetch(url);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Requests API ${response.status}: ${detail.slice(0, 200) || response.statusText}`
+    );
+  }
+  const data = await response.json();
+  return data.map((d: any) => mapBackendRequest(d));
+}
+
+/** Map a Request model document to DonationRecord. */
+function mapBackendRequest(d: any): DonationRecord {
+  const dateSrc = d.createdAt || d.postedAt;
+  const landmark =
+    d.location?.landmark ||
+    d.location?.areaName ||
+    d.location?.address ||
+    "Nearby";
+
+  // requester is the recipient who posted the help request
+  const recipientId: string | undefined = d.requester?._id
+    ? String(d.requester._id)
+    : d.requester
+    ? String(d.requester)
+    : undefined;
+
+  const recipientName: string =
+    d.requester?.name || d.requesterName || "Anonymous";
+
+  // map request type — "money" in model but "financial" in frontend
+  const rawType = d.type === "money" ? "financial" : d.type;
+  const type = (["food", "clothes", "blood", "financial"].includes(rawType)
+    ? rawType
+    : "food") as DonationRecord["type"];
+
+  return {
+    id: String(d._id),
+    type,
+    title: d.message?.split("\n")[0] || d.quantityText || "Help Request",
+    shortDescription: d.message || "",
+    recipientName,
+    recipientId,
+    donorId: undefined,
+    amount: d.quantityText,
+    date: dateSrc
+      ? new Date(dateSrc).toLocaleDateString()
+      : new Date().toLocaleDateString(),
+    location: landmark,
+    status: d.status === "pending" ? "pending" : d.status === "approved" ? "in-progress" : "completed",
+    distanceKm: typeof d.distanceKm === "number" ? d.distanceKm : undefined,
+    postedAtIso: dateSrc ? new Date(dateSrc).toISOString() : undefined,
+  };
 }
 
 export async function fetchAllDonations() {
@@ -226,12 +331,18 @@ export function subscribe(cb: Subscriber) {
   };
 }
 
-async function apiFetch(endpoint: string, params?: Record<string, string | number | boolean | undefined>) {
+async function apiFetch(
+  endpoint: string,
+  params?: Record<string, string | number | boolean | undefined>
+) {
   const url = buildApiUrl(endpoint);
   const query = params
     ? Object.entries(params)
         .filter(([, value]) => value !== undefined && value !== null)
-        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+        .map(
+          ([key, value]) =>
+            `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`
+        )
         .join("&")
     : "";
 
@@ -239,12 +350,9 @@ async function apiFetch(endpoint: string, params?: Record<string, string | numbe
 
   return fetch(requestUrl, {
     method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
+    headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
 }
+
 export default {};
-
-

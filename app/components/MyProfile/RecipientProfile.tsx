@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
   Bell,
   ChevronRight,
@@ -8,6 +9,7 @@ import {
   Shield,
   User,
 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -16,11 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
 import { apiFetch } from "../../lib/apiClient";
 import { clearToken } from "../../lib/token";
-import api from "../../services/chatApi";
 
 interface Props {
   onNavigate: (screen: string) => void;
@@ -28,7 +27,9 @@ interface Props {
 
 export default function RecipientProfile({ onNavigate }: Props) {
   const router = useRouter();
-  const [user, setUser] = useState<{ _id?: string; id?: string; name: string; email: string } | null>(null);
+  const [user, setUser] = useState<
+    { _id?: string; id?: string; name: string; email: string } | null
+  >(null);
   const [trustScore, setTrustScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -44,9 +45,11 @@ export default function RecipientProfile({ onNavigate }: Props) {
         const uid = data?.user?._id || data?.user?.id;
         if (uid) {
           try {
-            const trustRes = await api.get(`/api/users/${uid}/trust-score`);
+            const trustRes = await apiFetch(`/api/users/${uid}/trust-score`);
+            if (!trustRes.ok) throw new Error("Failed to fetch trust score");
+            const trustData = await trustRes.json();
             const score =
-              typeof trustRes?.data?.score === "number" ? trustRes.data.score : 0;
+              typeof trustData?.score === "number" ? trustData.score : 0;
             setTrustScore(score);
           } catch {
             // silently skip on trust score failure
@@ -69,7 +72,11 @@ export default function RecipientProfile({ onNavigate }: Props) {
 
   const menu = [
     { label: "Edit Profile", icon: User, screen: "edit-profile" },
-    { label: "Account Settings", icon: Settings, screen: "account-settings" },
+    {
+      label: "Account Settings",
+      icon: Settings,
+      screen: "account-settings",
+    },
     { label: "Notifications", icon: Bell, screen: "notifications" },
     { label: "Privacy & Security", icon: Shield, screen: "privacy" },
     { label: "Help & Support", icon: HelpCircle, screen: "help" },
@@ -115,7 +122,9 @@ export default function RecipientProfile({ onNavigate }: Props) {
         >
           <Text style={styles.name}>{user?.name}</Text>
           {trustScore !== null && (
-            <Text style={styles.trustBadge}>⭐ Trust Score: {trustScore}/100</Text>
+            <Text style={styles.trustBadge}>
+              ⭐ Trust Score: {trustScore}/100
+            </Text>
           )}
         </View>
 
@@ -217,4 +226,3 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: "red", fontWeight: "600" },
 });
-

@@ -30,8 +30,16 @@ function toPublicDonation(doc, distanceKm) {
 
   const postedAt = d.createdAt || d.postedAt;
 
+  // Resolve donorId — stored as `donor` in the model
+  const donorId = d.donor?._id
+    ? d.donor._id.toString()
+    : d.donor
+    ? d.donor.toString()
+    : null;
+
   const out = {
     _id: id,
+    donorId,          // ← now included
     type: d.type,
     title,
     shortDescription,

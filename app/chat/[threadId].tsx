@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
   FlatList,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
-import * as socketService from "../services/socketService";
-import * as chatApi from "../services/chatApi";
-import { getToken } from "../lib/token";
-import { jwtDecode } from "jwt-decode";
 import FeedbackForm from "../components/FeedbackForm";
+import { getToken } from "../lib/token";
+import * as socketService from "../services/socketService";
 
 import ChatBubble from "../components/ChatBubble";
 import TypingIndicator from "../components/TypingIndicator";
@@ -97,20 +96,27 @@ export default function ChatScreen() {
   const fetchThread = async (uid: string) => {
     try {
       setLoading(true);
-      const data = await chatApi.getThreadById(threadId as string, uid);
-
+      const token = await getToken();
+      
+      // Direct fetch with token instead of axios chatApi
+      const response = await fetch(`http://localhost:5000/api/chats/${threadId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
       setThread(data);
-
-      // Determine other user (not stored locally)
-      const otherUser = data.donorId._id === uid ? data.recipientId : data.donorId;
-
-      // Fetch messages
-      const messagesData = await chatApi.getMessages(threadId as string, uid);
-
-      setMessages(messagesData);
-
-
-      // Mark as read
+  
+      const messagesRes = await fetch(
+        `http://localhost:5000/api/messages/${threadId}/messages`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const messagesData = await messagesRes.json();
+      setMessages(Array.isArray(messagesData) ? messagesData : []);
+  
       socketService.markRead(threadId as string);
     } catch (error) {
       console.error("Error fetching thread:", error);

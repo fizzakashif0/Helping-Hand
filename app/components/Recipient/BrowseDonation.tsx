@@ -1,12 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { timeAgo } from "../../lib/timeAgo";
+import { getToken } from "../../lib/token";
 import {
   DonationRecord,
   fetchAvailableDonationsDetached,
@@ -24,13 +24,6 @@ import {
 interface BrowseDonationsProps {
   onBack: () => void;
 }
-
-const typeEmoji: Record<string, string> = {
-  food: "🍽️",
-  clothes: "👕",
-  blood: "🩸",
-  financial: "💰",
-};
 
 function categoryMatches(selected: string, item: DonationRecord) {
   if (selected === "All") return true;
@@ -45,6 +38,8 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
   const [list, setList] = useState<DonationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [locNote, setLocNote] = useState("");
+  // Track which donation's contact button is loading
+  const [contactLoadingId, setContactLoadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,31 +86,56 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
   );
 
   const typeLabel = (t: string) =>
-    t === "financial" ? "Financial" : t.charAt(0).toUpperCase() + t.slice(1);
+    t === "financial"
+      ? "Financial"
+      : t.charAt(0).toUpperCase() + t.slice(1);
 
   const handleContactDonor = async (item: DonationRecord) => {
+    if (contactLoadingId) return; // prevent double tap
+    setContactLoadingId(item.id);
     try {
+      const token = await getToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const decoded: any = jwtDecode(token);
+      const recipientId = decoded?.sub || decoded?.id;
+      if (!recipientId) throw new Error("Could not decode user");
+
       const donorId =
-        (item as any).donorId || (item as any).donor?._id || "000000000000000000000001";
-      const recipientId = "000000000000000000000002";
+        (item as any).donorId ||
+        (item as any).donor?._id ||
+        (item as any).userId;
+
       const donationId = item.id;
 
-      const response = await fetch("http://localhost:5000/api/chat-requests", {
+      const response = await fetch("http://localhost:5000/api/chats", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ donorId, recipientId, donationId }),
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to send request");
+
+      // 409 means thread already exists — backend returns the existing threadId
+      if (response.status === 409) {
+        const threadId = data.threadId || data._id;
+        if (threadId) {
+          router.push(`/chat/${threadId}`);
+          return;
+        }
       }
 
-      Alert.alert("Success", "Request sent to donor");
+      if (!response.ok) throw new Error(data?.message || "Failed to start chat");
+
+      const threadId = data._id || data.threadId || data.id;
+      router.push(`/chat/${threadId}`);
     } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to send request");
+      console.error("Contact donor error:", error);
+    } finally {
+      setContactLoadingId(null);
     }
   };
 
@@ -142,7 +162,11 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categories}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categories}
+        >
           {categories.map((cat) => (
             <TouchableOpacity
               key={cat}
@@ -175,68 +199,103 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16 }}
           ListEmptyComponent={
-            <Text style={styles.emptyList}>No donations match your filters.</Text>
+            <Text style={styles.emptyList}>
+              No donations match your filters.
+            </Text>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/recipient-donation/${item.id}`)}
-            >
-              <View style={styles.badgeRow}>
-                <View
-                  style={[
-                    styles.badge,
-                    item.type === "food"
-                      ? styles.typeFood
-                      : item.type === "clothes"
-                      ? styles.typeClothes
-                      : item.type === "blood"
-                      ? styles.typeBlood
-                      : styles.typeFinancial,
-                  ]}
-                >
-                  <Text style={styles.badgeText}>{typeLabel(item.type)}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardDesc} numberOfLines={2}>
-                {item.shortDescription || item.title}
-              </Text>
-
-              <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="location-outline" size={14} color="#6B7280" />
-                  <Text style={styles.metaText}>{item.location}</Text>
+          renderItem={({ item }) => {
+            const isContactLoading = contactLoadingId === item.id;
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/recipient-donation/${item.id}`)}
+              >
+                {/* Type Badge */}
+                <View style={styles.badgeRow}>
+                  <View
+                    style={[
+                      styles.badge,
+                      item.type === "food"
+                        ? styles.typeFood
+                        : item.type === "clothes"
+                        ? styles.typeClothes
+                        : item.type === "blood"
+                        ? styles.typeBlood
+                        : styles.typeFinancial,
+                    ]}
+                  >
+                    <Text style={styles.badgeText}>{typeLabel(item.type)}</Text>
+                  </View>
                 </View>
 
-                <View style={styles.metaItem}>
-                  <Ionicons name="time-outline" size={14} color="#6B7280" />
-                  <Text style={styles.metaText}>
-                    {timeAgo(item.postedAtIso || item.date)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.actionsRow}>
-                <Text style={styles.distanceText}>
-                  {item.distanceKm != null ? `${item.distanceKm.toFixed(1)} km away` : ""}
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardDesc} numberOfLines={2}>
+                  {item.shortDescription || item.title}
                 </Text>
-                <TouchableOpacity
-                  style={styles.contactBtn}
-                  onPress={() => handleContactDonor(item)}
-                >
-                  <Text style={styles.contactText}>Contact Donor</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.requestBtn}
-                  onPress={() => router.push(`/recipient-donation/${item.id}`)}
-                >
-                  <Text style={styles.requestText}>Request</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          )}
+
+                <View style={styles.metaRow}>
+                  <View style={styles.metaItem}>
+                    <Ionicons
+                      name="location-outline"
+                      size={14}
+                      color="#6B7280"
+                    />
+                    <Text style={styles.metaText}>{item.location}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="time-outline" size={14} color="#6B7280" />
+                    <Text style={styles.metaText}>
+                      {timeAgo(item.postedAtIso || item.date)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Actions Row: distance + Contact Donor + Request */}
+                <View style={styles.actionsRow}>
+                  <Text style={styles.distanceText}>
+                    {item.distanceKm != null
+                      ? `${item.distanceKm.toFixed(1)} km away`
+                      : ""}
+                  </Text>
+
+                  <View style={styles.actionBtns}>
+                    {/* Contact Donor button */}
+                    <TouchableOpacity
+                      style={styles.contactBtn}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleContactDonor(item);
+                      }}
+                      disabled={!!contactLoadingId}
+                    >
+                      {isContactLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="chatbubble-outline"
+                            size={14}
+                            color="#fff"
+                          />
+                          <Text style={styles.contactText}>Contact Donor</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Request button */}
+                    <TouchableOpacity
+                      style={styles.requestBtn}
+                      onPress={() =>
+                        router.push(`/recipient-donation/${item.id}`)
+                      }
+                    >
+                      <Text style={styles.requestText}>Request</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </View>
@@ -244,10 +303,7 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0E4A61",
-  },
+  container: { flex: 1, backgroundColor: "#0E4A61" },
   header: {
     backgroundColor: "#1A5F7A",
     paddingHorizontal: 20,
@@ -259,24 +315,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  backText: {
-    color: "#fff",
-    marginLeft: 6,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  subtitle: {
-    color: "#d0e4ee",
-    marginBottom: 12,
-  },
-  locNote: {
-    color: "#fde68a",
-    fontSize: 12,
-    marginBottom: 8,
-  },
+  backText: { color: "#fff", marginLeft: 6 },
+  title: { color: "#fff", fontSize: 20, fontWeight: "600" },
+  subtitle: { color: "#d0e4ee", marginBottom: 12 },
+  locNote: { color: "#fde68a", fontSize: 12, marginBottom: 8 },
   searchBox: {
     flexDirection: "row",
     backgroundColor: "rgba(255,255,255,0.2)",
@@ -284,14 +326,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  searchInput: {
-    color: "#fff",
-    marginLeft: 8,
-    flex: 1,
-  },
-  categories: {
-    marginTop: 8,
-  },
+  searchInput: { color: "#fff", marginLeft: 8, flex: 1 },
+  categories: { marginTop: 8 },
   categoryChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -299,15 +335,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     marginRight: 8,
   },
-  categoryActive: {
-    backgroundColor: "#fff",
-  },
-  categoryText: {
-    color: "#fff",
-  },
-  categoryTextActive: {
-    color: "#1A5F7A",
-  },
+  categoryActive: { backgroundColor: "#fff" },
+  categoryText: { color: "#fff" },
+  categoryTextActive: { color: "#1A5F7A" },
+
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -315,45 +346,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     elevation: 3,
   },
-  badgeRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 6,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  badgeRow: { flexDirection: "row", gap: 8, marginBottom: 6 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  badgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
     marginBottom: 4,
   },
-  cardDesc: {
-    fontSize: 13,
-    color: "#374151",
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginVertical: 10,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
+  cardDesc: { fontSize: 13, color: "#374151" },
+  metaRow: { flexDirection: "row", gap: 12, marginVertical: 10 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaText: { fontSize: 12, color: "#6B7280" },
+
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -361,43 +367,39 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
     paddingTop: 10,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  distanceText: {
-    color: "#6B7280",
-    fontSize: 12,
-  },
-  requestBtn: {
-    backgroundColor: "#1A5F7A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  requestText: {
-    color: "#fff",
+  distanceText: { color: "#6B7280", fontSize: 12 },
+  actionBtns: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
   },
   contactBtn: {
     backgroundColor: "#0F766E",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    marginRight: 8,
-  },
-  contactText: {
-    color: "#fff",
-  },
-  loadingBox: {
-    flex: 1,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    minWidth: 120,
+    justifyContent: "center",
   },
-  loadingText: {
-    color: "#fff",
+  contactText: { color: "#fff", fontSize: 13 },
+  requestBtn: {
+    backgroundColor: "#1A5F7A",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  emptyList: {
-    textAlign: "center",
-    color: "#fff",
-    marginTop: 24,
-  },
+  requestText: { color: "#fff" },
+
+  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { color: "#fff" },
+  emptyList: { textAlign: "center", color: "#fff", marginTop: 24 },
+
   typeFood: { backgroundColor: "#22C55E" },
   typeClothes: { backgroundColor: "#3B82F6" },
   typeBlood: { backgroundColor: "#B91C1C" },
