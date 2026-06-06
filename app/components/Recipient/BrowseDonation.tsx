@@ -5,7 +5,9 @@ import { jwtDecode } from "jwt-decode";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,7 +40,6 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
   const [list, setList] = useState<DonationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [locNote, setLocNote] = useState("");
-  // Track which donation's contact button is loading
   const [contactLoadingId, setContactLoadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -91,20 +92,31 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
       : t.charAt(0).toUpperCase() + t.slice(1);
 
   const handleContactDonor = async (item: DonationRecord) => {
-    if (contactLoadingId) return; // prevent double tap
+    if (contactLoadingId) return;
     setContactLoadingId(item.id);
     try {
       const token = await getToken();
-      if (!token) throw new Error("Not authenticated");
+      if (!token) {
+        Alert.alert("Error", "Please login first");
+        return;
+      }
 
       const decoded: any = jwtDecode(token);
       const recipientId = decoded?.sub || decoded?.id;
-      if (!recipientId) throw new Error("Could not decode user");
+      if (!recipientId) {
+        Alert.alert("Error", "Could not decode user");
+        return;
+      }
 
       const donorId =
         (item as any).donorId ||
         (item as any).donor?._id ||
         (item as any).userId;
+
+      if (!donorId) {
+        Alert.alert("Error", "Donor not found on this post");
+        return;
+      }
 
       const donationId = item.id;
 
@@ -119,7 +131,6 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 
       const data = await response.json().catch(() => ({}));
 
-      // 409 means thread already exists — backend returns the existing threadId
       if (response.status === 409) {
         const threadId = data.threadId || data._id;
         if (threadId) {
@@ -133,6 +144,7 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
       const threadId = data._id || data.threadId || data.id;
       router.push(`/chat/${threadId}`);
     } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to start chat");
       console.error("Contact donor error:", error);
     } finally {
       setContactLoadingId(null);
@@ -206,51 +218,52 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
           renderItem={({ item }) => {
             const isContactLoading = contactLoadingId === item.id;
             return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push(`/recipient-donation/${item.id}`)}
-              >
+              <View style={styles.card}>
                 {/* Type Badge */}
-                <View style={styles.badgeRow}>
-                  <View
-                    style={[
-                      styles.badge,
-                      item.type === "food"
-                        ? styles.typeFood
-                        : item.type === "clothes"
-                        ? styles.typeClothes
-                        : item.type === "blood"
-                        ? styles.typeBlood
-                        : styles.typeFinancial,
-                    ]}
-                  >
-                    <Text style={styles.badgeText}>{typeLabel(item.type)}</Text>
+                <Pressable
+                  onPress={() => router.push(`/recipient-donation/${item.id}`)}
+                >
+                  <View style={styles.badgeRow}>
+                    <View
+                      style={[
+                        styles.badge,
+                        item.type === "food"
+                          ? styles.typeFood
+                          : item.type === "clothes"
+                          ? styles.typeClothes
+                          : item.type === "blood"
+                          ? styles.typeBlood
+                          : styles.typeFinancial,
+                      ]}
+                    >
+                      <Text style={styles.badgeText}>{typeLabel(item.type)}</Text>
+                    </View>
                   </View>
-                </View>
 
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>
-                  {item.shortDescription || item.title}
-                </Text>
+                  <Text style={styles.cardTitle}>{item.title}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>
+                    {item.shortDescription || item.title}
+                  </Text>
 
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <Ionicons
-                      name="location-outline"
-                      size={14}
-                      color="#6B7280"
-                    />
-                    <Text style={styles.metaText}>{item.location}</Text>
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                      <Ionicons
+                        name="location-outline"
+                        size={14}
+                        color="#6B7280"
+                      />
+                      <Text style={styles.metaText}>{item.location}</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Ionicons name="time-outline" size={14} color="#6B7280" />
+                      <Text style={styles.metaText}>
+                        {timeAgo(item.postedAtIso || item.date)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color="#6B7280" />
-                    <Text style={styles.metaText}>
-                      {timeAgo(item.postedAtIso || item.date)}
-                    </Text>
-                  </View>
-                </View>
+                </Pressable>
 
-                {/* Actions Row: distance + Contact Donor + Request */}
+                {/* Actions Row */}
                 <View style={styles.actionsRow}>
                   <Text style={styles.distanceText}>
                     {item.distanceKm != null
@@ -260,12 +273,9 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 
                   <View style={styles.actionBtns}>
                     {/* Contact Donor button */}
-                    <TouchableOpacity
+                    <Pressable
                       style={styles.contactBtn}
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        handleContactDonor(item);
-                      }}
+                      onPress={() => handleContactDonor(item)}
                       disabled={!!contactLoadingId}
                     >
                       {isContactLoading ? (
@@ -280,20 +290,18 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
                           <Text style={styles.contactText}>Contact Donor</Text>
                         </>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
 
                     {/* Request button */}
-                    <TouchableOpacity
+                    <Pressable
                       style={styles.requestBtn}
-                      onPress={() =>
-                        router.push(`/recipient-donation/${item.id}`)
-                      }
+                      onPress={() => router.push(`/recipient-donation/${item.id}`)}
                     >
                       <Text style={styles.requestText}>Request</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </View>
             );
           }}
         />

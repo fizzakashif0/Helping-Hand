@@ -16,6 +16,8 @@ import {
 import FeedbackForm from "../components/FeedbackForm";
 import { getToken } from "../lib/token";
 import * as socketService from "../services/socketService";
+import { buildApiUrl } from "../lib/api";
+
 
 import ChatBubble from "../components/ChatBubble";
 import TypingIndicator from "../components/TypingIndicator";
@@ -99,7 +101,7 @@ export default function ChatScreen() {
       const token = await getToken();
       
       // Direct fetch with token instead of axios chatApi
-      const response = await fetch(`http://localhost:5000/api/chats/${threadId}`, {
+      const response = await fetch(buildApiUrl(`/api/chats/${threadId}`), {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -109,7 +111,7 @@ export default function ChatScreen() {
       setThread(data);
   
       const messagesRes = await fetch(
-        `http://localhost:5000/api/messages/${threadId}/messages`,
+        buildApiUrl(`/api/messages/${threadId}/messages`),
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -188,11 +190,12 @@ export default function ChatScreen() {
   };
 
   const getOtherUserName = () => {
-    if (!thread) return "Chat";
-    return thread.donorId._id === userId
-      ? thread.recipientId.name
-      : thread.donorId.name;
-  };
+  if (!thread) return "Chat";
+  if (!thread.donorId || !thread.recipientId) return "Chat";
+  return thread.donorId._id === userId
+    ? (thread.recipientId?.name || "Recipient")
+    : (thread.donorId?.name || "Donor");
+};
 
   const renderMessageItem = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId._id === userId;

@@ -12,6 +12,11 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
+import { getToken } from "../../lib/token";
+import { buildApiUrl } from "../../lib/api";
+
 
 export type DonationType = "clothes" | "food" | "blood" | "financial";
 
@@ -42,18 +47,49 @@ const urgencyConfig = {
 };
 
 export function DonationPost({ post }: { post: DonationPostData }) {
+  const router = useRouter();
   const handleContactRecipient = async () => {
     try {
-      const donorId = "000000000000000000000001";
-      const recipientId = "000000000000000000000002";
+      const token = await getToken();
+      if (!token) {
+        Alert.alert("Error", "Missing auth token");
+        return;
+      }
+
+      const decoded: any = jwtDecode(token);
+      const senderId = decoded?.sub || decoded?.id;
+      if (!senderId) {
+        Alert.alert("Error", "Unable to determine current user");
+        return;
+      }
+
       const donationId = post.id;
 
-      const response = await fetch("http://localhost:5000/api/chat-requests", {
+      // Determine the other person's id (the person being contacted)
+      const recipientId =
+        (post as any)?.donorId ||
+        (post as any)?.author ||
+        (post as any)?.authorId ||
+        (post as any)?.userId ||
+        (post as any)?._id ||
+        null;
+
+      if (!recipientId) {
+        Alert.alert("Error", "Unable to determine recipient");
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/chat-requests"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ donorId, recipientId, donationId }),
+        body: JSON.stringify({
+          donorId: senderId,
+          recipientId,
+          donationId,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -61,7 +97,7 @@ export function DonationPost({ post }: { post: DonationPostData }) {
         throw new Error(data?.message || "Failed to send request");
       }
 
-      Alert.alert("Success", "Request sent");
+      router.push("/chat-list");
     } catch (error: any) {
       Alert.alert("Error", error?.message || "Failed to send request");
     }
