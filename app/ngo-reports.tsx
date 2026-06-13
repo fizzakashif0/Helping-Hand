@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "./lib/token";
 import {
   BarChart3,
   TrendingUp,
@@ -71,7 +71,7 @@ export default function NGOReportsScreen() {
       else setLoading(true);
       setError(null);
 
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;

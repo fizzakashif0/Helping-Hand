@@ -335,7 +335,6 @@ async function googleLogin({ idToken, googleId, email, name, profilePicture }) {
 }
 
 // ─── NGO AUTH ────────────────────────────────────────────────────────────────
-
 async function registerNGO({ name, email, password, orgName, registrationNumber, orgType, missionStatement, phone, address, website }) {
   const normalizedEmail = String(email).toLowerCase().trim();
   assertValidEmail(normalizedEmail);
@@ -359,18 +358,27 @@ async function registerNGO({ name, email, password, orgName, registrationNumber,
     isVerified: true,
   });
 
-  // 2. Create NGO document — single source of truth for verification status
-  const ngo = await NGO.create({
-    userId: user._id,
-    organizationName: orgName,
-    registrationId: registrationNumber,
-    orgType,
-    missionStatement,
-    phone,
-    address,
-    website,
-    verificationStatus: 'pending',
-  });
+  // 2. Create NGO document — with rollback if it fails
+  let ngo;
+  try {
+    ngo = await NGO.create({
+      userId: user._id,
+      organizationName: orgName,
+      ...(registrationNumber ? { registrationId: registrationNumber } : {}),
+      orgType,
+      missionStatement,
+      phone,
+      address,
+      website,
+      verificationStatus: 'pending',
+    });
+  } catch (ngoErr) {
+    // Roll back User to avoid orphan records
+    await User.findByIdAndDelete(user._id);
+    const err = new Error('Failed to create NGO profile: ' + ngoErr.message);
+    err.statusCode = 500;
+    throw err;
+  }
 
   // 3. Mirror ngoId + verificationStatus onto User for quick reads
   user.ngoProfile = {

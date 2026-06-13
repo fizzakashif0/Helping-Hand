@@ -64,23 +64,24 @@ router.get('/me/stats', async (req, res) => {
 
     const ngoUserId = ngo.userId;
 
-    // Run all queries in parallel for performance
+    // Run all queries in parallel
     const [
-      donationsPostedByNGO,       // NGO is the donor
-      donationsReceivedByNGO,     // NGO is an applicant/recipient
+      donationsPostedByNGO,
+      donationsReceivedByNGO,
       completedPosted,
       completedReceived,
-      recentDonations,
       totalEvents,
       activeEvents,
+      recentDonations,
+      recentEventDocs,
     ] = await Promise.all([
-      // Total donations posted by this NGO
+      // Donations posted by this NGO as donor
       Donation.countDocuments({
         donor: ngoUserId,
         postType: 'donation',
       }),
 
-      // Total donations where NGO applied as recipient
+      // Donations where NGO applied as recipient
       Donation.countDocuments({
         applicants: ngoUserId,
         postType: 'donation',
@@ -100,7 +101,16 @@ router.get('/me/stats', async (req, res) => {
         status: 'completed',
       }),
 
-      // 5 most recent donations involving this NGO (posted or received)
+      // Total events created by this NGO
+      Event.countDocuments({ ngo: ngoUserId }),
+
+      // Active events (upcoming + active)
+      Event.countDocuments({
+        ngo: ngoUserId,
+        status: { $in: ['upcoming', 'active'] },
+      }),
+
+      // 5 most recent donations involving this NGO
       Donation.find({
         $or: [
           { donor: ngoUserId },
@@ -112,21 +122,19 @@ router.get('/me/stats', async (req, res) => {
         .select('description type status createdAt quantityText donor applicants')
         .lean(),
 
-      // Total events created by this NGO
-      Event.countDocuments({ ngo: ngoUserId }),
-
-      // Events currently active (upcoming or active counts as "active" for dashboard purposes)
-      Event.countDocuments({
-        ngo: ngoUserId,
-        status: { $in: ['upcoming', 'active'] },
-      }),
+      // 5 most recent events
+      Event.find({ ngo: ngoUserId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('name status startDate participants')
+        .lean(),
     ]);
 
     const totalDonations = donationsPostedByNGO + donationsReceivedByNGO;
     const completedDonations = completedPosted + completedReceived;
 
-    // Shape recentDonations for the frontend
-    const recentEvents = recentDonations.map((d) => {
+    // Shape recent donations for frontend
+    const recentDonationItems = recentDonations.map((d) => {
       const desc = d.description || '';
       const name = desc.split('\n')[0]?.trim() || `${d.type} donation`;
       const isPostedByNGO = d.donor?.toString() === ngoUserId.toString();
@@ -135,12 +143,34 @@ router.get('/me/stats', async (req, res) => {
         _id: d._id,
         name,
         participants: d.applicants?.length || 0,
-        donations: 0,              // monetary amount — not tracked in this model
+        donations: 0,
         status: d.status === 'completed' ? 'Completed' : 'Ongoing',
         date: d.createdAt?.toISOString().split('T')[0] || '',
         role: isPostedByNGO ? 'donor' : 'recipient',
+        itemType: 'donation',
       };
     });
+
+    // Shape recent events for frontend
+    const recentEventItems = recentEventDocs.map((e) => ({
+      _id: e._id,
+      name: e.name,
+      participants: e.participants?.length || 0,
+      donations: 0,
+      status: e.status === 'completed'
+        ? 'Completed'
+        : e.status === 'cancelled'
+        ? 'Cancelled'
+        : 'Ongoing',
+      date: e.startDate?.toISOString().split('T')[0] || '',
+      role: 'organizer',
+      itemType: 'event',
+    }));
+
+    // Merge and sort by date, most recent first, cap at 5
+    const recentEvents = [...recentDonationItems, ...recentEventItems]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
 
     res.json({
       stats: {

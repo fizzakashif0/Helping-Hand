@@ -16,9 +16,9 @@ const ngoSchema = new mongoose.Schema(
     },
     registrationId: {
       type: String,
-      required: true,
       trim: true,
       unique: true,
+      sparse: true,  // ← allows multiple documents to have null/undefined without breaking unique
       index: true,
     },
     orgType: {
