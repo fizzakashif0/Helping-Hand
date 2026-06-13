@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -12,194 +14,288 @@ import {
   Calendar,
   MapPin,
   Users,
-  Package,
   Clock,
-  Target,
-  AlertTriangle,
+  Building2,
+  CheckCircle,
+  HandHeart,
 } from "lucide-react-native";
+import { getToken } from "../lib/token";
+import { getUserRole } from "../store/userStore";
 
-export default function EventDetailsScreen() {
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000";
+
+interface EventDetail {
+  _id: string;
+  name: string;
+  description: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  targetParticipants: number;
+  participants: number;
+  participantIds: string[];
+  ngoName: string;
+  ngoId: string;
+}
+
+export default function EventDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const eventId = params.id as string;
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // If no eventId is provided, show a message
-  if (!eventId) {
+  const userRole = getUserRole();
+
+  useEffect(() => {
+    if (id) {
+      fetchEvent();
+      fetchCurrentUser();
+    }
+  }, [id]);
+
+  async function fetchEvent() {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/events/public/${id}`);
+      if (!res.ok) {
+        Alert.alert("Error", "Event not found");
+        router.back();
+        return;
+      }
+      const data = await res.json();
+      setEvent(data.event);
+    } catch (_) {
+      Alert.alert("Error", "Failed to load event");
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+ async function fetchCurrentUser() {
+  try {
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      // Handle both response shapes
+      const uid = data._id || data.id || data.user?._id || data.user?.id;
+      setCurrentUserId(uid);
+    }
+  } catch (_) {}
+}
+
+  // Once both event and currentUserId are set, check joined status
+  useEffect(() => {
+    if (event && currentUserId) {
+      setHasJoined(event.participantIds.includes(currentUserId));
+    }
+  }, [event, currentUserId]);
+
+ async function handleJoin() {
+  try {
+    setJoining(true);
+    const token = await getToken();
+    if (!token) { router.replace("/login"); return; }
+
+    const res = await fetch(`${API_URL}/api/events/${id}/join`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+    if (!res.ok) { Alert.alert("Error", data.message || "Failed"); return; }
+
+    // Server now tells us the truth
+    setHasJoined(data.joined);
+    setEvent(prev => prev ? {
+      ...prev,
+      participants: data.participants,
+      participantIds: data.participantIds,
+    } : prev);
+
+    Alert.alert(data.joined ? "Joined!" : "Left", data.message);
+  } catch (_) {
+    Alert.alert("Error", "Network error. Please try again.");
+  } finally {
+    setJoining(false);
+  }
+}
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Event Details</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: '#fff', fontSize: 18 }}>Event ID is required</Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.loadingText}>Loading event...</Text>
       </View>
     );
   }
 
-  // Mock event data - in a real app, this would be fetched based on eventId
-  const eventData = {
-    id: eventId,
-    name: "Winter Relief Drive",
-    description: "Providing warm clothing and food to families in need during the winter season. Join us in making a difference in our community.",
-    date: "2024-01-15",
-    location: "Community Center, Downtown",
-    duration: "2 weeks",
-    targetAmount: "15000",
-    urgencyLevel: "High",
-    specialInstructions: "Please bring warm clothing in good condition. Food donations should be non-perishable.",
-    status: "Active",
-    participants: 450,
-    donations: 12500,
-    organizer: "Green Earth Foundation",
-  };
+  if (!event) return null;
 
-  const handleViewParticipants = () => {
-    router.push("/event-participants" as any);
-  };
+  const statusColor =
+    event.status === "active" ? "#22c55e" :
+    event.status === "upcoming" ? "#eab308" :
+    event.status === "completed" ? "#3b82f6" : "#ef4444";
 
-  const handleTrackDistribution = () => {
-    router.push("/event-distribution-tracking" as any);
-  };
+  const progressPct = event.targetParticipants > 0
+    ? Math.min((event.participants / event.targetParticipants) * 100, 100)
+    : 0;
 
-  const handleCompleteEvent = () => {
-    router.push("/event-completion" as any);
-  };
+  const isNGO = userRole?.toLowerCase() === "ngo";
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event Details</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Event Title and Status */}
-        <View style={styles.titleSection}>
-          <Text style={styles.eventTitle}>{eventData.name}</Text>
-          <View style={[styles.statusBadge, {
-            backgroundColor: eventData.status === "Active" ? "#dcfce7" : "#fee2e2"
-          }]}>
-            <Text style={[styles.statusText, {
-              color: eventData.status === "Active" ? "#166534" : "#991b1b"
-            }]}>
-              {eventData.status}
-            </Text>
+
+        {/* Title + Status */}
+        <View style={styles.titleRow}>
+          <Text style={styles.eventTitle}>{event.name}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            <Text style={styles.statusText}>{event.status}</Text>
           </View>
         </View>
 
-        {/* Event Description */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{eventData.description}</Text>
+        {/* NGO */}
+        <View style={styles.ngoRow}>
+          <Building2 size={16} color="#B2D8E8" />
+          <Text style={styles.ngoName}>{event.ngoName}</Text>
         </View>
 
-        {/* Event Details */}
+        {/* Details Grid */}
         <View style={styles.detailsGrid}>
+          {event.startDate ? (
+            <View style={styles.detailCard}>
+              <Calendar size={20} color="#1A5F7A" />
+              <Text style={styles.detailLabel}>Start Date</Text>
+              <Text style={styles.detailValue}>{event.startDate}</Text>
+            </View>
+          ) : null}
+          {event.endDate ? (
+            <View style={styles.detailCard}>
+              <Clock size={20} color="#1A5F7A" />
+              <Text style={styles.detailLabel}>End Date</Text>
+              <Text style={styles.detailValue}>{event.endDate}</Text>
+            </View>
+          ) : null}
+          {event.location ? (
+            <View style={styles.detailCard}>
+              <MapPin size={20} color="#1A5F7A" />
+              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailValue}>{event.location}</Text>
+            </View>
+          ) : null}
           <View style={styles.detailCard}>
-            <Calendar size={20} color="#1A5F7A" />
-            <Text style={styles.detailLabel}>Date</Text>
-            <Text style={styles.detailValue}>{eventData.date}</Text>
-          </View>
-          <View style={styles.detailCard}>
-            <MapPin size={20} color="#1A5F7A" />
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text style={styles.detailValue}>{eventData.location}</Text>
-          </View>
-          <View style={styles.detailCard}>
-            <Clock size={20} color="#1A5F7A" />
-            <Text style={styles.detailLabel}>Duration</Text>
-            <Text style={styles.detailValue}>{eventData.duration}</Text>
-          </View>
-          <View style={styles.detailCard}>
-            <Target size={20} color="#1A5F7A" />
-            <Text style={styles.detailLabel}>Target</Text>
-            <Text style={styles.detailValue}>${eventData.targetAmount}</Text>
-          </View>
-        </View>
-
-        {/* Urgency Level */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Urgency Level</Text>
-          <View style={[styles.urgencyBadge, {
-            backgroundColor: eventData.urgencyLevel === "High" ? "#fee2e2" :
-                           eventData.urgencyLevel === "Medium" ? "#fef3c7" : "#dcfce7"
-          }]}>
-            <AlertTriangle size={16} color={
-              eventData.urgencyLevel === "High" ? "#991b1b" :
-              eventData.urgencyLevel === "Medium" ? "#92400e" : "#166534"
-            } />
-            <Text style={[styles.urgencyText, {
-              color: eventData.urgencyLevel === "High" ? "#991b1b" :
-                     eventData.urgencyLevel === "Medium" ? "#92400e" : "#166534"
-            }]}>
-              {eventData.urgencyLevel} Priority
+            <Users size={20} color="#1A5F7A" />
+            <Text style={styles.detailLabel}>Participants</Text>
+            <Text style={styles.detailValue}>
+              {event.participants}{event.targetParticipants > 0 ? ` / ${event.targetParticipants}` : ''}
             </Text>
           </View>
         </View>
 
-        {/* Special Instructions */}
-        {eventData.specialInstructions && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Special Instructions</Text>
-            <Text style={styles.instructions}>{eventData.specialInstructions}</Text>
+        {/* Progress bar */}
+        {event.targetParticipants > 0 && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+            </View>
+            <Text style={styles.progressText}>
+              {Math.round(progressPct)}% of target reached
+            </Text>
           </View>
         )}
 
-        {/* Stats */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Current Progress</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Users size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>{eventData.participants}</Text>
-              <Text style={styles.statLabel}>Participants</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Package size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>${eventData.donations}</Text>
-              <Text style={styles.statLabel}>Donations</Text>
+        {/* Description */}
+        {event.description ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About this Event</Text>
+            <View style={styles.sectionBox}>
+              <Text style={styles.descriptionText}>{event.description}</Text>
             </View>
           </View>
+        ) : null}
+
+       {/* Action Buttons */}
+<View style={styles.actionsSection}>
+
+  {/* Donor — Join / Leave */}
+  {userRole === "donor" && (
+    hasJoined ? (
+      <View style={{ gap: 10 }}>
+        <View style={styles.joinedBadge}>
+          <CheckCircle size={20} color="#22c55e" />
+          <Text style={styles.joinedText}>You've joined this event</Text>
         </View>
+        <TouchableOpacity
+          style={[styles.primaryBtn, { backgroundColor: '#ef4444' }, joining && styles.btnDisabled]}
+          onPress={handleJoin}
+          disabled={joining}
+        >
+          <Text style={styles.primaryBtnText}>{joining ? "Leaving..." : "Leave Event"}</Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <TouchableOpacity
+        style={[styles.primaryBtn, joining && styles.btnDisabled]}
+        onPress={handleJoin}
+        disabled={joining}
+      >
+        {joining ? <ActivityIndicator size="small" color="#fff" /> : <Users size={20} color="#fff" />}
+        <Text style={styles.primaryBtnText}>{joining ? "Joining..." : "Join as Volunteer"}</Text>
+      </TouchableOpacity>
+    )
+  )}
 
-        {/* Organizer */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Organizer</Text>
-          <Text style={styles.organizer}>{eventData.organizer}</Text>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleViewParticipants}>
-            <Users size={20} color="#fff" />
-            <Text style={styles.actionButtonText}>View Participants</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleTrackDistribution}>
-            <Package size={20} color="#fff" />
-            <Text style={styles.actionButtonText}>Track Distribution</Text>
-          </TouchableOpacity>
-
-          {eventData.status === "Active" && (
-            <TouchableOpacity style={[styles.actionButton, styles.completeButton]} onPress={handleCompleteEvent}>
-              <Text style={styles.actionButtonText}>Complete Event</Text>
-            </TouchableOpacity>
+          {/* Recipient — Apply for help */}
+          {userRole === "recipient" && (
+            hasJoined ? (
+              <View style={styles.joinedBadge}>
+                <CheckCircle size={20} color="#22c55e" />
+                <Text style={styles.joinedText}>You've applied for this event</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.applyBtn, joining && styles.btnDisabled]}
+                onPress={handleJoin}
+                disabled={joining}
+              >
+                {joining
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <HandHeart size={20} color="#fff" />
+                }
+                <Text style={styles.primaryBtnText}>
+                  {joining ? "Applying..." : "Apply for Help"}
+                </Text>
+              </TouchableOpacity>
+            )
           )}
+
+          {/* NGO — no action (they own events) */}
+          {isNGO && (
+            <View style={styles.ngoNote}>
+              <Text style={styles.ngoNoteText}>
+                This is a public view of the event as seen by donors and recipients.
+              </Text>
+            </View>
+          )}
+
         </View>
       </ScrollView>
     </View>
@@ -210,6 +306,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#1A5F7A",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#1A5F7A",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
   },
   header: {
     backgroundColor: "#1A5F7A",
@@ -224,53 +331,53 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
   },
   content: {
     padding: 20,
+    paddingBottom: 40,
   },
-  titleSection: {
+  titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20,
+    marginBottom: 8,
+    gap: 12,
   },
   eventTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#fff",
     flex: 1,
-    marginRight: 12,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
   statusText: {
+    color: "#fff",
     fontSize: 12,
     fontWeight: "600",
+    textTransform: "capitalize",
   },
-  section: {
-    marginBottom: 24,
+  ngoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 16,
-    color: "#fff",
-    lineHeight: 24,
+  ngoName: {
+    color: "#B2D8E8",
+    fontSize: 14,
+    fontWeight: "500",
   },
   detailsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   detailCard: {
     backgroundColor: "#fff",
@@ -278,101 +385,120 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     width: "48%",
-    marginBottom: 16,
+    marginBottom: 12,
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6b7280",
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#1f2937",
     textAlign: "center",
   },
-  urgencyBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+  progressSection: {
+    marginBottom: 20,
   },
-  urgencyText: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 6,
+  progressBar: {
+    height: 8,
+    backgroundColor: "#ffffff33",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 6,
   },
-  instructions: {
-    fontSize: 14,
-    color: "#fff",
-    lineHeight: 20,
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#22c55e",
+    borderRadius: 4,
   },
-  statsSection: {
-    marginBottom: 24,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-    width: "48%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1f2937",
-    marginTop: 8,
-  },
-  statLabel: {
+  progressText: {
+    color: "#B2D8E8",
     fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
+    textAlign: "right",
   },
-  organizer: {
+  section: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
     fontSize: 16,
+    fontWeight: "700",
     color: "#fff",
+    marginBottom: 10,
+  },
+  sectionBox: {
+    backgroundColor: "#ffffff15",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ffffff22",
+  },
+  descriptionText: {
+    color: "#fff",
+    fontSize: 15,
+    lineHeight: 22,
   },
   actionsSection: {
+    marginTop: 8,
     gap: 12,
-    marginTop: 20,
   },
-  actionButton: {
-    backgroundColor: "#fff",
+  primaryBtn: {
+    backgroundColor: "#22c55e",
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    gap: 8,
     elevation: 3,
   },
-  completeButton: {
-    backgroundColor: "#22c55e",
+  applyBtn: {
+    backgroundColor: "#7C3AED",
   },
-  actionButtonText: {
-    color: "#1A5F7A",
+  btnDisabled: {
+    opacity: 0.6,
+  },
+  primaryBtnText: {
+    color: "#fff",
     fontSize: 16,
+    fontWeight: "700",
+  },
+  joinedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#ffffff15",
+    borderRadius: 12,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: "#22c55e",
+  },
+  joinedText: {
+    color: "#22c55e",
+    fontSize: 15,
     fontWeight: "600",
-    marginLeft: 8,
+  },
+  ngoNote: {
+    backgroundColor: "#ffffff15",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ffffff22",
+  },
+  ngoNoteText: {
+    color: "#B2D8E8",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

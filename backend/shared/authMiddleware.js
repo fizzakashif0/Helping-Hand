@@ -54,19 +54,14 @@ async function verifyToken(req, res, next) {
 }
 
 function requireRole(...roles) {
-  const allowed = roles.flat();
-
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const userRole = req.user.role;
+    // Normalise to lowercase for comparison
+    const userRole = req.user.role?.toLowerCase();
+    const allowed = roles.map(r => r.toLowerCase());
     if (!allowed.includes(userRole)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-
-    return next();
+    next();
   };
 }
 

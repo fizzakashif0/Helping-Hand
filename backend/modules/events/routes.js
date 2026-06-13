@@ -3,11 +3,107 @@ const router = express.Router();
 const Event = require('./model');
 const { verifyToken, requireRole } = require('../../shared/authMiddleware');
 
-// All event-management routes require a logged-in NGO user
+// ─── PUBLIC (no auth) ─────────────────────────────────────────────────────────
+
+router.get('/public', async (req, res) => {
+  try {
+    const events = await Event.find({
+      status: { $in: ['upcoming', 'active'] },
+    })
+      .populate('ngo', 'name ngoProfile')
+      .sort({ startDate: 1 })
+      .limit(20)
+      .lean();
+
+    const shaped = events.map((e) => ({
+      _id: e._id,
+      name: e.name,
+      description: e.description || '',
+      location: e.location || '',
+      startDate: e.startDate ? new Date(e.startDate).toISOString().split('T')[0] : '',
+      endDate: e.endDate ? new Date(e.endDate).toISOString().split('T')[0] : '',
+      status: e.status,
+      targetParticipants: e.targetParticipants || 0,
+      participants: e.participants?.length || 0,
+      ngoName: e.ngo?.ngoProfile?.orgName || e.ngo?.name || 'NGO',
+    }));
+
+    res.json({ events: shaped });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/public/:id', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate('ngo', 'name ngoProfile')
+      .lean();
+
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    res.json({
+      event: {
+        _id: event._id,
+        name: event.name,
+        description: event.description || '',
+        location: event.location || '',
+        startDate: event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : '',
+        endDate: event.endDate ? new Date(event.endDate).toISOString().split('T')[0] : '',
+        status: event.status,
+        targetParticipants: event.targetParticipants || 0,
+        participants: event.participants?.length || 0,
+        participantIds: event.participants?.map(p => p.toString()) || [],
+        ngoName: event.ngo?.ngoProfile?.orgName || event.ngo?.name || 'NGO',
+        ngoId: event.ngo?._id,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── ANY LOGGED-IN USER ───────────────────────────────────────────────────────
 router.use(verifyToken);
+
+// POST /api/events/:id/join — donor volunteers or recipient applies
+router.post('/:id/join', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    const userId = req.user.id;
+    const alreadyJoined = event.participants.some(p => p.toString() === userId);
+
+    if (alreadyJoined) {
+      // Toggle: leave the event
+      event.participants = event.participants.filter(p => p.toString() !== userId);
+      await event.save();
+      return res.json({
+        message: 'You have left the event',
+        joined: false,
+        participants: event.participants.length,
+        participantIds: event.participants.map(p => p.toString()),
+      });
+    }
+
+    event.participants.push(userId);
+    await event.save();
+
+    res.json({
+      message: 'Successfully joined the event',
+      joined: true,
+      participants: event.participants.length,
+      participantIds: event.participants.map(p => p.toString()),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── NGO ONLY ─────────────────────────────────────────────────────────────────
 router.use(requireRole('NGO'));
 
-// POST /api/events — create a new event
 router.post('/', async (req, res) => {
   try {
     const { name, description, location, startDate, endDate } = req.body;
@@ -32,7 +128,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/events/mine — list this NGO's events
 router.get('/mine', async (req, res) => {
   try {
     const events = await Event.find({ ngo: req.user.id })
@@ -45,7 +140,6 @@ router.get('/mine', async (req, res) => {
   }
 });
 
-// GET /api/events/:id — single event detail
 router.get('/:id', async (req, res) => {
   try {
     const event = await Event.findOne({ _id: req.params.id, ngo: req.user.id })
@@ -61,7 +155,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/events/:id — update event details/status
 router.put('/:id', async (req, res) => {
   try {
     const allowed = ['name', 'description', 'location', 'startDate', 'endDate', 'status'];
@@ -88,7 +181,6 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/events/:id — remove an event
 router.delete('/:id', async (req, res) => {
   try {
     const event = await Event.findOneAndDelete({ _id: req.params.id, ngo: req.user.id });
