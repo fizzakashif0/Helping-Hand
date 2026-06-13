@@ -55,11 +55,11 @@ const userSchema = new mongoose.Schema({
     ],
 
     // Admin reviews this status
-    verificationStatus: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
+   verificationStatus: {
+  type: String,
+  enum: ["pending", "verified", "rejected"],
+  default: "pending",
+},
 
     rejectionReason: { type: String },      // filled by admin on rejection
     reviewedBy: {

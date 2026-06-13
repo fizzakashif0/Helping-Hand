@@ -21,6 +21,26 @@ const ngoSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    orgType: {
+      type: String,
+      trim: true,
+    },
+    missionStatement: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+    website: {
+      type: String,
+      trim: true,
+    },
     documents: {
       type: [String],
       default: [],
@@ -30,6 +50,19 @@ const ngoSchema = new mongoose.Schema(
       enum: ["pending", "verified", "rejected"],
       default: "pending",
       index: true,
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../auth/model');
+const NGO = require('../ngos/model');
 const { verifyToken, requireRole } = require('../../shared/authMiddleware');
 
 // All routes here require admin
@@ -10,10 +11,9 @@ router.use(requireRole('admin'));
 // GET all pending NGO applications
 router.get('/ngos/pending', async (req, res) => {
   try {
-    const ngos = await User.find({
-      role: 'NGO',
-      'ngoProfile.verificationStatus': 'pending',
-    }).select('-password');
+    // Pull from NGO collection (source of truth) and populate user details
+    const ngos = await NGO.find({ verificationStatus: 'pending' })
+      .populate('userId', '-password');
 
     res.json({ ngos });
   } catch (err) {
@@ -21,46 +21,63 @@ router.get('/ngos/pending', async (req, res) => {
   }
 });
 
-// PUT approve an NGO
+// PUT approve an NGO — :id is the NGO document _id
 router.put('/ngos/:id/approve', async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
+    // 1. Update NGO collection (source of truth)
+    const ngo = await NGO.findByIdAndUpdate(
       req.params.id,
       {
-        'ngoProfile.verificationStatus': 'approved',
-        'ngoProfile.reviewedBy': req.user.id,
-        'ngoProfile.reviewedAt': new Date(),
+        verificationStatus: 'verified',      // ← 'approved' was wrong; enum is 'verified'
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
       },
       { new: true }
-    ).select('-password');
+    );
 
-    if (!user) return res.status(404).json({ message: 'NGO not found' });
+    if (!ngo) return res.status(404).json({ message: 'NGO not found' });
 
-    res.json({ message: 'NGO approved', user });
+    // 2. Sync mirror on User
+    await User.findByIdAndUpdate(ngo.userId, {
+      'ngoProfile.verificationStatus': 'verified',
+      'ngoProfile.reviewedBy': req.user.id,
+      'ngoProfile.reviewedAt': new Date(),
+    });
+
+    res.json({ message: 'NGO approved', ngo });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// PUT reject an NGO
+// PUT reject an NGO — :id is the NGO document _id
 router.put('/ngos/:id/reject', async (req, res) => {
   try {
     const { reason } = req.body;
 
-    const user = await User.findByIdAndUpdate(
+    // 1. Update NGO collection (source of truth)
+    const ngo = await NGO.findByIdAndUpdate(
       req.params.id,
       {
-        'ngoProfile.verificationStatus': 'rejected',
-        'ngoProfile.rejectionReason': reason || 'No reason provided',
-        'ngoProfile.reviewedBy': req.user.id,
-        'ngoProfile.reviewedAt': new Date(),
+        verificationStatus: 'rejected',
+        rejectionReason: reason || 'No reason provided',
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
       },
       { new: true }
-    ).select('-password');
+    );
 
-    if (!user) return res.status(404).json({ message: 'NGO not found' });
+    if (!ngo) return res.status(404).json({ message: 'NGO not found' });
 
-    res.json({ message: 'NGO rejected', user });
+    // 2. Sync mirror on User
+    await User.findByIdAndUpdate(ngo.userId, {
+      'ngoProfile.verificationStatus': 'rejected',
+      'ngoProfile.rejectionReason': reason || 'No reason provided',
+      'ngoProfile.reviewedBy': req.user.id,
+      'ngoProfile.reviewedAt': new Date(),
+    });
+
+    res.json({ message: 'NGO rejected', ngo });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

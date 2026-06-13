@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const validator = require('validator');
 const User = require('./model');
+const NGO = require('../ngos/model');
 const { hashPassword, comparePassword } = require('../../utils/hashPassword');
 const generateToken = require('../../utils/generateToken');
 const sendOtpEmail = require('../../utils/sendOtp');
@@ -109,13 +110,6 @@ async function loginUser({ email, password }) {
     err.statusCode = 403;
     throw err;
   }
-
-  // Email verification gate removed to allow login without verified email (regression fix).
-  // if (user.authProvider === 'local' && !user.isVerified) {
-  //   const err = new Error('Please verify your email before logging in');
-  //   err.statusCode = 403;
-  //   throw err;
-  // }
 
   const ok = await comparePassword(password, user.password);
   if (!ok) {
@@ -340,6 +334,8 @@ async function googleLogin({ idToken, googleId, email, name, profilePicture }) {
   };
 }
 
+// ─── NGO AUTH ────────────────────────────────────────────────────────────────
+
 async function registerNGO({ name, email, password, orgName, registrationNumber, orgType, missionStatement, phone, address, website }) {
   const normalizedEmail = String(email).toLowerCase().trim();
   assertValidEmail(normalizedEmail);
@@ -353,6 +349,7 @@ async function registerNGO({ name, email, password, orgName, registrationNumber,
 
   const hashed = await hashPassword(password);
 
+  // 1. Create the User with role NGO
   const user = await User.create({
     name: String(name).trim(),
     email: normalizedEmail,
@@ -360,17 +357,34 @@ async function registerNGO({ name, email, password, orgName, registrationNumber,
     role: 'NGO',
     authProvider: 'local',
     isVerified: true,
-    ngoProfile: {
-      orgName,
-      registrationNumber,
-      orgType,
-      missionStatement,
-      phone,
-      address,
-      website,
-      verificationStatus: 'pending',
-    },
   });
+
+  // 2. Create NGO document — single source of truth for verification status
+  const ngo = await NGO.create({
+    userId: user._id,
+    organizationName: orgName,
+    registrationId: registrationNumber,
+    orgType,
+    missionStatement,
+    phone,
+    address,
+    website,
+    verificationStatus: 'pending',
+  });
+
+  // 3. Mirror ngoId + verificationStatus onto User for quick reads
+  user.ngoProfile = {
+    ngoId: ngo._id,
+    orgName,
+    registrationNumber,
+    orgType,
+    missionStatement,
+    phone,
+    address,
+    website,
+    verificationStatus: 'pending',
+  };
+  await user.save();
 
   const token = generateToken({ id: user._id, email: user.email, role: user.role });
 
@@ -411,13 +425,25 @@ async function loginNGO({ email, password }) {
     throw err;
   }
 
+  // Read verificationStatus from NGO collection (source of truth)
+  const ngo = await NGO.findOne({ userId: user._id }).select('verificationStatus');
+  const verificationStatus = ngo?.verificationStatus || user.ngoProfile?.verificationStatus || 'pending';
+
+  // Keep User mirror in sync if it drifted (e.g. admin approved but User wasn't updated)
+  if (ngo && user.ngoProfile?.verificationStatus !== ngo.verificationStatus) {
+    await User.updateOne(
+      { _id: user._id },
+      { 'ngoProfile.verificationStatus': ngo.verificationStatus }
+    );
+  }
+
   const token = generateToken({ id: user._id, email: user.email, role: user.role });
 
   return {
     token,
     user: toPublicUser(user),
     requiresRoleSelection: false,
-    verificationStatus: user.ngoProfile?.verificationStatus || 'pending',
+    verificationStatus,
   };
 }
 

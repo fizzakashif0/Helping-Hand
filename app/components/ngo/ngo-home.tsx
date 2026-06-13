@@ -1,62 +1,119 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Calendar,
   Users,
   Package,
   TrendingUp,
   Plus,
-  Eye,
   Settings,
 } from "lucide-react-native";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000";
+
+interface Stats {
+  totalEvents: number;
+  activeEvents: number;
+  totalDonations: number;
+  totalParticipants: number;
+}
+
+interface RecentEvent {
+  _id: string;
+  name: string;
+  participants: number;
+  status: string;
+  date: string;
+}
+
+const DEFAULT_STATS: Stats = {
+  totalEvents: 0,
+  activeEvents: 0,
+  totalDonations: 0,
+  totalParticipants: 0,
+};
 
 export default function NGOHomeScreen() {
   const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
+  const [stats, setStats] = useState<Stats>(DEFAULT_STATS);
+  const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+  const [ngoName, setNgoName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock data for NGO dashboard
-  const dashboardData = {
-    totalEvents: 12,
-    activeEvents: 3,
-    totalParticipants: 2450,
-    totalDonations: 15600,
-    recentEvents: [
-      {
-        id: 1,
-        name: "Winter Relief Drive",
-        participants: 450,
-        status: "Active",
-        date: "2024-01-15",
-      },
-      {
-        id: 2,
-        name: "Food Distribution",
-        participants: 320,
-        status: "Completed",
-        date: "2024-01-10",
-      },
-      {
-        id: 3,
-        name: "Medical Aid Camp",
-        participants: 280,
-        status: "Active",
-        date: "2024-01-20",
-      },
-    ],
-  };
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  async function loadDashboard(isRefresh = false) {
+    try {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      // Fetch stats and profile in parallel
+      const [statsRes, profileRes] = await Promise.all([
+        fetch(`${API_URL}/api/ngos/me/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_URL}/api/ngos/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats ?? DEFAULT_STATS);
+        setRecentEvents(statsData.recentEvents ?? []);
+      }
+
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setNgoName(profileData.ngo?.organizationName || "");
+      }
+    } catch (_) {
+      // Network error — keep showing last known data
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>NGO Dashboard</Text>
+        <View>
+          <Text style={styles.headerTitle}>NGO Dashboard</Text>
+          {ngoName ? (
+            <Text style={styles.headerSubtitle}>{ngoName}</Text>
+          ) : null}
+        </View>
         <TouchableOpacity
           onPress={() => (router.push as any)("/ngo-profile")}
           style={styles.settingsButton}
@@ -65,7 +122,18 @@ export default function NGOHomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadDashboard(true)}
+            tintColor="#fff"
+            colors={["#fff"]}
+          />
+        }
+      >
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <TouchableOpacity
@@ -73,31 +141,31 @@ export default function NGOHomeScreen() {
             onPress={() => (router.push as any)("/total-events")}
           >
             <Calendar size={24} color="#1A5F7A" />
-            <Text style={styles.statValue}>{dashboardData.totalEvents}</Text>
+            <Text style={styles.statValue}>{stats.totalEvents}</Text>
             <Text style={styles.statLabel}>Total Events</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.statCard}
             onPress={() => (router.push as any)("/total-participants")}
           >
             <Users size={24} color="#1A5F7A" />
-            <Text style={styles.statValue}>{dashboardData.totalParticipants}</Text>
+            <Text style={styles.statValue}>{stats.totalParticipants}</Text>
             <Text style={styles.statLabel}>Participants</Text>
           </TouchableOpacity>
+
           <View style={styles.statCard}>
             <Package size={24} color="#1A5F7A" />
-            <Text style={styles.statValue}>{dashboardData.totalDonations}</Text>
+            <Text style={styles.statValue}>{stats.totalDonations}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
+
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => {
-              // Navigate to the Active Events screen
-              (router.push as any)("/active-events");
-            }}
+            onPress={() => (router.push as any)("/active-events")}
           >
             <TrendingUp size={24} color="#1A5F7A" />
-            <Text style={styles.statValue}>{dashboardData.activeEvents}</Text>
+            <Text style={styles.statValue}>{stats.activeEvents}</Text>
             <Text style={styles.statLabel}>Active Events</Text>
           </TouchableOpacity>
         </View>
@@ -126,33 +194,42 @@ export default function NGOHomeScreen() {
         {/* Active Events */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Active Events</Text>
-          {dashboardData.recentEvents.filter(event => event.status === "Active").map((event) => (
-            <TouchableOpacity
-              key={event.id}
-              style={styles.eventCard}
-              onPress={() => (router.push as any)(`/event-details/${event.id}`)}
-            >
-              <View style={styles.eventHeader}>
-                <Text style={styles.eventName}>{event.name}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: "#22c55e",
-                    },
-                  ]}
+
+          {recentEvents.filter((e) => e.status === "Active").length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No active events right now.</Text>
+              <TouchableOpacity
+                onPress={() => (router.push as any)("/create-event")}
+              >
+                <Text style={styles.emptyLink}>Create your first event →</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            recentEvents
+              .filter((e) => e.status === "Active")
+              .map((event) => (
+                <TouchableOpacity
+                  key={event._id}
+                  style={styles.eventCard}
+                  onPress={() =>
+                    (router.push as any)(`/event-details/${event._id}`)
+                  }
                 >
-                  <Text style={styles.statusText}>{event.status}</Text>
-                </View>
-              </View>
-              <View style={styles.eventDetails}>
-                <Text style={styles.eventParticipants}>
-                  {event.participants} participants
-                </Text>
-                <Text style={styles.eventDate}>{event.date}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                  <View style={styles.eventHeader}>
+                    <Text style={styles.eventName}>{event.name}</Text>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusText}>{event.status}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <Text style={styles.eventParticipants}>
+                      {event.participants} participants
+                    </Text>
+                    <Text style={styles.eventDate}>{event.date}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -163,6 +240,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#1A5F7A",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#1A5F7A",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
   },
   header: {
     backgroundColor: "#1A5F7A",
@@ -176,6 +264,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 24,
     fontWeight: "bold",
+  },
+  headerSubtitle: {
+    color: "#B2D8E8",
+    fontSize: 13,
+    marginTop: 2,
   },
   settingsButton: {
     padding: 8,
@@ -247,6 +340,22 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 30,
   },
+  emptyCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  emptyLink: {
+    fontSize: 14,
+    color: "#1A5F7A",
+    fontWeight: "600",
+  },
   eventCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -274,6 +383,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    backgroundColor: "#22c55e",
   },
   statusText: {
     color: "#fff",
