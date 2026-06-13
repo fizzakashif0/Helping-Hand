@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { getToken } from "./lib/token";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 const POLL_INTERVAL_MS = 10000; // poll every 10 seconds
@@ -14,43 +14,46 @@ export default function NGOPendingScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Check immediately on mount, then poll
-    checkVerificationStatus();
-    intervalRef.current = setInterval(checkVerificationStatus, POLL_INTERVAL_MS);
+  checkVerificationStatus(); // ← fires immediately on mount
+  intervalRef.current = setInterval(checkVerificationStatus, 5000);
 
-    return () => {
+  return () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+}, []);
+
+ async function checkVerificationStatus() {
+  try {
+    setChecking(true);
+    const token = await getToken(); 
+    console.log('[poll] token:', token ? 'EXISTS' : 'NULL');
+
+    if (!token) return;
+
+    const res = await fetch(`${API_URL}/api/ngos/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    console.log('[poll] status:', res.status);
+    const data = await res.json();
+    console.log('[poll] data:', JSON.stringify(data));
+
+    const status = data?.ngo?.verificationStatus;
+    console.log('[poll] verificationStatus:', status);
+
+    if (status === 'verified') {
       if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  async function checkVerificationStatus() {
-    try {
-      setChecking(true);
-      const token = await AsyncStorage.getItem('token');
-      if (!token) return; // not logged in, do nothing
-
-      const res = await fetch(`${API_URL}/api/ngos/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) return; // server error, keep waiting silently
-
-      const data = await res.json();
-      const status = data?.ngo?.verificationStatus;
-
-      if (status === 'verified') {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        router.replace('/ngo-home');
-      } else if (status === 'rejected') {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setStatusMessage('rejected');
-      }
-    } catch (_) {
-      // network error — keep polling silently
-    } finally {
-      setChecking(false);
+      router.replace('/ngo-home');
+    } else if (status === 'rejected') {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setStatusMessage('rejected');
     }
+  } catch (err) {
+    console.log('[poll] error:', err);
+  } finally {
+    setChecking(false);
   }
+}
 
   return (
     <View style={styles.container}>

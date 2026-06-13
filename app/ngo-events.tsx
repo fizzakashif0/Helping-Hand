@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "./lib/token";
 import {
   ArrowLeft,
   Plus,
@@ -65,7 +65,7 @@ export default function NGOEventsScreen() {
       else setLoading(true);
       setError(null);
 
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;
@@ -107,7 +107,7 @@ export default function NGOEventsScreen() {
       setUpdatingId(eventId);
       setStatusMenuFor(null);
 
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;
@@ -154,7 +154,7 @@ export default function NGOEventsScreen() {
     try {
       setUpdatingId(eventId);
 
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;

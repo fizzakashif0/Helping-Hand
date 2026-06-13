@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "./lib/token";
 import {
   Calendar,
   Users,
@@ -67,43 +67,42 @@ export default function NGOHomeScreen() {
   }, []);
 
   async function loadDashboard(isRefresh = false) {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+  try {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
 
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const [statsRes, profileRes] = await Promise.all([
-        fetch(`${API_URL}/api/ngos/me/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_URL}/api/ngos/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-
-      if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.stats ?? DEFAULT_STATS);
-        setRecentEvents(data.recentEvents ?? []);
-      }
-
-      if (profileRes.ok) {
-        const data = await profileRes.json();
-        setNgoName(data.ngo?.organizationName || "");
-      }
-    } catch (_) {
-      // keep showing last known data on network error
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    const token = await getToken(); 
+    if (!token) {
+      router.replace("/login");
+      return;
     }
-  }
 
+    const [statsRes, profileRes] = await Promise.all([
+      fetch(`${API_URL}/api/ngos/me/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch(`${API_URL}/api/ngos/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    if (statsRes.ok) {
+      const data = await statsRes.json();
+      setStats(data.stats ?? DEFAULT_STATS);
+      setRecentEvents(data.recentEvents ?? []);
+    }
+
+    if (profileRes.ok) {
+      const data = await profileRes.json();
+      setNgoName(data.ngo?.organizationName || "");
+    }
+  } catch (_) {
+    // keep showing last known data on network error
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}
   if (loading) {
     return (
       <View style={styles.loadingContainer}>

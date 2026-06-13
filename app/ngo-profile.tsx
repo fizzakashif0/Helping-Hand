@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "./lib/token";
 import {
   ArrowLeft,
   User,
@@ -60,55 +60,57 @@ export default function NGOProfileScreen() {
   }, []);
 
   async function fetchProfile() {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const res = await fetch(`${API_URL}/api/ngos/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        Alert.alert("Error", err.message || "Failed to load profile");
-        return;
-      }
-
-      const data = await res.json();
-      const ngo = data.ngo;
-
-      // Also get email from stored user info
-      const userRaw = await AsyncStorage.getItem("user");
-      const user = userRaw ? JSON.parse(userRaw) : null;
-
-      const mapped: ProfileData = {
-        organizationName: ngo.organizationName || "",
-        email: user?.email || "",
-        phone: ngo.phone || "",
-        address: ngo.address || "",
-        missionStatement: ngo.missionStatement || "",
-        website: ngo.website || "",
-        orgType: ngo.orgType || "",
-        verificationStatus: ngo.verificationStatus || "pending",
-      };
-
-      setProfileData(mapped);
-      setEditData(mapped);
-    } catch (err) {
-      Alert.alert("Error", "Network error. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const token = await getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
     }
-  }
 
+    const res = await fetch(`${API_URL}/api/ngos/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      Alert.alert("Error", err.message || "Failed to load profile");
+      return;
+    }
+
+    const data = await res.json();
+    const ngo = data.ngo;
+
+    // Get email from JWT via /api/auth/me or from stored user
+    // ngo-profile route now populates userId so we can get email from there
+    const meRes = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const meData = meRes.ok ? await meRes.json() : null;
+
+    const mapped: ProfileData = {
+      organizationName: ngo.organizationName || "",
+      email: meData?.user?.email || meData?.email || "",
+      phone: ngo.phone || "",
+      address: ngo.address || "",
+      missionStatement: ngo.missionStatement || "",
+      website: ngo.website || "",
+      orgType: ngo.orgType || "",
+      verificationStatus: ngo.verificationStatus || "pending",
+    };
+
+    setProfileData(mapped);
+    setEditData(mapped);
+  } catch (err) {
+    Alert.alert("Error", "Network error. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}
   async function handleSave() {
     try {
       setSaving(true);
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;

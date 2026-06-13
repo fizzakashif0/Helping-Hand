@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getToken } from "./lib/token";
 import {
   ArrowLeft,
   Calendar,
@@ -65,7 +65,7 @@ export default function CreateEventScreen() {
 
     try {
       setSaving(true);
-      const token = await AsyncStorage.getItem("token");
+      const token = await getToken();
       if (!token) {
         router.replace("/login");
         return;
