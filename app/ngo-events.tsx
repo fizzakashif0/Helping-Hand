@@ -96,11 +96,14 @@ export default function NGOEventsScreen() {
   }, [loadEvents]);
 
   // Refresh whenever the screen regains focus (e.g. after creating an event)
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  // Auto-refresh every 30s while screen is focused
+useFocusEffect(
+  useCallback(() => {
+    loadEvents();
+    const interval = setInterval(() => loadEvents(), 30000);
+    return () => clearInterval(interval);
+  }, [loadEvents])
+);
 
   async function updateStatus(eventId: string, status: EventItem["status"]) {
     try {
