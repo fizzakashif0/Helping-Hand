@@ -57,13 +57,11 @@ app.use("/api/donation-requests", donationRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/home", homeRoutes);
 app.use('/api/admin', adminRoutes);
-
+app.use('/api/ngos', require('./modules/ngos/routes'));
 
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/chat-requests", chatRequestRoutes);
-
-
 
 const http = require("http");
 const initializeSocket = require("./socket");

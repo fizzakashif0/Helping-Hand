@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ArrowLeft,
   User,
@@ -21,30 +23,160 @@ import {
   Camera,
 } from "lucide-react-native";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000";
+
+interface ProfileData {
+  organizationName: string;
+  email: string;
+  phone: string;
+  address: string;
+  missionStatement: string;
+  website: string;
+  orgType: string;
+  verificationStatus: string;
+}
+
+const EMPTY_PROFILE: ProfileData = {
+  organizationName: "",
+  email: "",
+  phone: "",
+  address: "",
+  missionStatement: "",
+  website: "",
+  orgType: "",
+  verificationStatus: "pending",
+};
+
 export default function NGOProfileScreen() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: "Helping Hands NGO",
-    email: "contact@helpinghands.org",
-    phone: "+1 (555) 123-4567",
-    address: "123 Charity Street, Helping City, HC 12345",
-    description: "Dedicated to providing relief and support to communities in need through various charitable activities and programs.",
-    website: "www.helpinghands.org",
-    founded: "2015",
-    totalEvents: 45,
-    totalBeneficiaries: 12500,
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profileData, setProfileData] = useState<ProfileData>(EMPTY_PROFILE);
+  const [editData, setEditData] = useState<ProfileData>(EMPTY_PROFILE);
 
-  const handleSave = () => {
-    // In a real app, this would save to backend
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  async function fetchProfile() {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/ngos/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        Alert.alert("Error", err.message || "Failed to load profile");
+        return;
+      }
+
+      const data = await res.json();
+      const ngo = data.ngo;
+
+      // Also get email from stored user info
+      const userRaw = await AsyncStorage.getItem("user");
+      const user = userRaw ? JSON.parse(userRaw) : null;
+
+      const mapped: ProfileData = {
+        organizationName: ngo.organizationName || "",
+        email: user?.email || "",
+        phone: ngo.phone || "",
+        address: ngo.address || "",
+        missionStatement: ngo.missionStatement || "",
+        website: ngo.website || "",
+        orgType: ngo.orgType || "",
+        verificationStatus: ngo.verificationStatus || "pending",
+      };
+
+      setProfileData(mapped);
+      setEditData(mapped);
+    } catch (err) {
+      Alert.alert("Error", "Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/ngos/me`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationName: editData.organizationName,
+          phone: editData.phone,
+          address: editData.address,
+          missionStatement: editData.missionStatement,
+          website: editData.website,
+          orgType: editData.orgType,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        Alert.alert("Error", err.message || "Failed to save profile");
+        return;
+      }
+
+      const data = await res.json();
+      const ngo = data.ngo;
+
+      const updated: ProfileData = {
+        ...profileData,
+        organizationName: ngo.organizationName || "",
+        phone: ngo.phone || "",
+        address: ngo.address || "",
+        missionStatement: ngo.missionStatement || "",
+        website: ngo.website || "",
+        orgType: ngo.orgType || "",
+      };
+
+      setProfileData(updated);
+      setEditData(updated);
+      setIsEditing(false);
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch (err) {
+      Alert.alert("Error", "Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
+    setEditData(profileData); // discard changes
     setIsEditing(false);
-    Alert.alert("Success", "Profile updated successfully!");
-  };
+  }
 
-  const handleInputChange = (field: string, value: string) => {
-    setProfileData({ ...profileData, [field]: value });
-  };
+  function handleInputChange(field: keyof ProfileData, value: string) {
+    setEditData({ ...editData, [field]: value });
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -58,7 +190,7 @@ export default function NGOProfileScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NGO Profile</Text>
         <TouchableOpacity
-          onPress={() => setIsEditing(!isEditing)}
+          onPress={() => isEditing ? handleCancel() : setIsEditing(true)}
           style={styles.editButton}
         >
           <Edit size={24} color="#fff" />
@@ -76,6 +208,20 @@ export default function NGOProfileScreen() {
               <Camera size={20} color="#fff" />
             </TouchableOpacity>
           )}
+          {/* Verification badge */}
+          <View style={[
+            styles.badge,
+            profileData.verificationStatus === "verified" && styles.badgeVerified,
+            profileData.verificationStatus === "rejected" && styles.badgeRejected,
+          ]}>
+            <Text style={styles.badgeText}>
+              {profileData.verificationStatus === "verified"
+                ? "✓ Verified"
+                : profileData.verificationStatus === "rejected"
+                ? "✗ Rejected"
+                : "⏳ Pending Approval"}
+            </Text>
+          </View>
         </View>
 
         {/* Basic Information */}
@@ -87,32 +233,23 @@ export default function NGOProfileScreen() {
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={profileData.name}
-                onChangeText={(text) => handleInputChange("name", text)}
+                value={editData.organizationName}
+                onChangeText={(t) => handleInputChange("organizationName", t)}
               />
             ) : (
-              <Text style={styles.fieldValue}>{profileData.name}</Text>
+              <Text style={styles.fieldValue}>{profileData.organizationName || "—"}</Text>
             )}
           </View>
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Email</Text>
-            {isEditing ? (
-              <View style={styles.inputWithIcon}>
-                <Mail size={20} color="#6b7280" style={styles.icon} />
-                <TextInput
-                  style={styles.inputWithIconText}
-                  value={profileData.email}
-                  onChangeText={(text) => handleInputChange("email", text)}
-                  keyboardType="email-address"
-                />
-              </View>
-            ) : (
-              <View style={styles.valueWithIcon}>
-                <Mail size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.email}</Text>
-              </View>
-            )}
+            {/* Email is not editable — comes from User account */}
+            <View style={styles.valueWithIcon}>
+              <Mail size={16} color="#6b7280" />
+              <Text style={[styles.fieldValue, styles.fieldValueFlat]}>
+                {profileData.email || "—"}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.field}>
@@ -122,15 +259,17 @@ export default function NGOProfileScreen() {
                 <Phone size={20} color="#6b7280" style={styles.icon} />
                 <TextInput
                   style={styles.inputWithIconText}
-                  value={profileData.phone}
-                  onChangeText={(text) => handleInputChange("phone", text)}
+                  value={editData.phone}
+                  onChangeText={(t) => handleInputChange("phone", t)}
                   keyboardType="phone-pad"
                 />
               </View>
             ) : (
               <View style={styles.valueWithIcon}>
                 <Phone size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.phone}</Text>
+                <Text style={[styles.fieldValue, styles.fieldValueFlat]}>
+                  {profileData.phone || "—"}
+                </Text>
               </View>
             )}
           </View>
@@ -142,8 +281,8 @@ export default function NGOProfileScreen() {
                 <MapPin size={20} color="#6b7280" style={styles.icon} />
                 <TextInput
                   style={styles.inputWithIconText}
-                  value={profileData.address}
-                  onChangeText={(text) => handleInputChange("address", text)}
+                  value={editData.address}
+                  onChangeText={(t) => handleInputChange("address", t)}
                   multiline
                   numberOfLines={2}
                 />
@@ -151,25 +290,31 @@ export default function NGOProfileScreen() {
             ) : (
               <View style={styles.valueWithIcon}>
                 <MapPin size={16} color="#6b7280" />
-                <Text style={styles.fieldValue}>{profileData.address}</Text>
+                <Text style={[styles.fieldValue, styles.fieldValueFlat]}>
+                  {profileData.address || "—"}
+                </Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Description */}
+        {/* Mission Statement */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>Mission Statement</Text>
           {isEditing ? (
             <TextInput
               style={[styles.input, styles.textArea]}
-              value={profileData.description}
-              onChangeText={(text) => handleInputChange("description", text)}
+              value={editData.missionStatement}
+              onChangeText={(t) => handleInputChange("missionStatement", t)}
               multiline
               numberOfLines={4}
+              placeholder="Describe your NGO's mission..."
+              placeholderTextColor="#9CA3AF"
             />
           ) : (
-            <Text style={styles.descriptionText}>{profileData.description}</Text>
+            <Text style={styles.descriptionText}>
+              {profileData.missionStatement || "No mission statement added yet."}
+            </Text>
           )}
         </View>
 
@@ -182,42 +327,45 @@ export default function NGOProfileScreen() {
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={profileData.website}
-                onChangeText={(text) => handleInputChange("website", text)}
+                value={editData.website}
+                onChangeText={(t) => handleInputChange("website", t)}
                 keyboardType="url"
+                placeholder="www.example.org"
+                placeholderTextColor="#9CA3AF"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profileData.website}</Text>
+              <Text style={styles.fieldValue}>{profileData.website || "—"}</Text>
             )}
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Founded</Text>
+            <Text style={styles.fieldLabel}>Organization Type</Text>
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={profileData.founded}
-                onChangeText={(text) => handleInputChange("founded", text)}
-                keyboardType="numeric"
+                value={editData.orgType}
+                onChangeText={(t) => handleInputChange("orgType", t)}
+                placeholder="e.g. Education, Health, Relief..."
+                placeholderTextColor="#9CA3AF"
               />
             ) : (
-              <Text style={styles.fieldValue}>{profileData.founded}</Text>
+              <Text style={styles.fieldValue}>{profileData.orgType || "—"}</Text>
             )}
           </View>
         </View>
 
-        {/* Statistics */}
+        {/* Impact Statistics */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Impact Statistics</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Building size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>{profileData.totalEvents}</Text>
+              <Text style={styles.statValue}>—</Text>
               <Text style={styles.statLabel}>Total Events</Text>
             </View>
             <View style={styles.statCard}>
               <User size={24} color="#1A5F7A" />
-              <Text style={styles.statValue}>{profileData.totalBeneficiaries}</Text>
+              <Text style={styles.statValue}>—</Text>
               <Text style={styles.statLabel}>Beneficiaries</Text>
             </View>
           </View>
@@ -225,9 +373,18 @@ export default function NGOProfileScreen() {
 
         {/* Save Button */}
         {isEditing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Save size={24} color="#fff" />
-            <Text style={styles.saveButtonText}>Save Changes</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Save size={24} color="#fff" />
+            }
+            <Text style={styles.saveButtonText}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -239,6 +396,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#1A5F7A",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#1A5F7A",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
   },
   header: {
     backgroundColor: "#1A5F7A",
@@ -281,11 +449,29 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     position: "absolute",
-    bottom: 0,
+    bottom: 30,
     right: "35%",
     backgroundColor: "#1A5F7A",
     borderRadius: 20,
     padding: 8,
+  },
+  badge: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "#F59E0B",
+  },
+  badgeVerified: {
+    backgroundColor: "#2D9E7A",
+  },
+  badgeRejected: {
+    backgroundColor: "#EF4444",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   section: {
     backgroundColor: "#fff",
@@ -301,7 +487,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#1A5F7A",
     marginBottom: 16,
   },
   field: {
@@ -316,11 +502,18 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 16,
     color: "#1f2937",
-    backgroundColor: "#fff",
+    backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
+  },
+  fieldValueFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    padding: 0,
+    marginLeft: 8,
+    flex: 1,
   },
   input: {
     backgroundColor: "#fff",
@@ -353,7 +546,7 @@ const styles = StyleSheet.create({
   valueWithIcon: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -363,7 +556,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#4b5563",
     lineHeight: 24,
-    backgroundColor: "#fff",
+    backgroundColor: "#F9FAFB",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -374,16 +567,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   statCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
     width: "48%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   statValue: {
     fontSize: 24,
@@ -405,11 +595,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 40,
+    gap: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: "#86efac",
   },
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-    marginLeft: 8,
   },
 });
