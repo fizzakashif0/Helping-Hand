@@ -1,23 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  RefreshControl,
-  ActivityIndicator,
-} from "react-native";
-import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import * as chatApi from "./services/chatApi";
+import { useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import BottomNav, { NavItem } from "./components/Navbar";
+import { buildApiUrl } from "./lib/api";
+import { getToken } from "./lib/token";
 
-interface Thread {
+interface ChatListItem {
   _id: string;
-  donorId: { _id: string; name: string; profilePicture?: string };
-  recipientId: { _id: string; name: string; profilePicture?: string };
+  otherUser: { _id: string; name: string; profilePicture?: string };
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
   status: "active" | "locked";
   updatedAt: string;
 }
@@ -25,51 +29,98 @@ interface Thread {
 export default function ChatListScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavItem>("notifications");
-  const [threads, setThreads] = useState<Thread[]>([]);
+  const [chats, setChats] = useState<ChatListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [userId, setUserId] = useState<string>("");
 
-  // In production, get userId from AsyncStorage/JWT
-  // For now, hardcode or get from navigation params
   useEffect(() => {
-    // TODO: Get userId from secure storage when JWT is implemented
-    const id = "user123"; // Placeholder
-    setUserId(id);
-    fetchThreads(id);
+    const init = async () => {
+      try {
+        const token = await getToken();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const decoded: any = jwtDecode(token);
+        const uid = decoded?.id || decoded?.sub;
+        if (!uid) {
+          setLoading(false);
+          return;
+        }
+
+        setUserId(uid);
+        await fetchChats(uid, token);
+      } catch (error) {
+        console.error("Init error:", error);
+        setLoading(false);
+      }
+    };
+
+    init();
   }, []);
 
-  const fetchThreads = async (uid: string) => {
-    try {
-      setLoading(true);
-      const data = await chatApi.getMyThreads(uid);
-      setThreads(data);
-    } catch (error) {
-      console.error("Error fetching threads:", error);
-    } finally {
-      setLoading(false);
+const fetchChats = async (uid: string, token: string) => {
+  try {
+    setLoading(true);
+    const response = await fetch(buildApiUrl(`/api/chats`), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      setChats([]);
+      return;
     }
-  };
+
+    const data = await response.json();
+
+    const mapped = Array.isArray(data) ? data.map((thread: any) => {
+      const isUserDonor = thread.donorId?._id === uid || thread.donorId === uid;
+      const otherUser = isUserDonor ? thread.recipientId : thread.donorId;
+
+      return {
+        _id: thread._id,
+        otherUser: {
+          _id: otherUser?._id || otherUser || "",
+          name: otherUser?.name || "User",
+          profilePicture: otherUser?.profilePicture,
+        },
+        lastMessage: thread.lastMessage || "No messages yet",
+        lastMessageTime: thread.updatedAt || thread.createdAt,
+        unreadCount: thread.unreadCount || 0,
+        status: thread.status || "active",
+        updatedAt: thread.updatedAt,
+      };
+    }) : [];
+
+    setChats(mapped);
+  } catch (error) {
+    console.error("Error fetching chats:", error);
+    setChats([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onRefresh = async () => {
+    if (!userId) return;
     setRefreshing(true);
-    await fetchThreads(userId);
-    setRefreshing(false);
-  };
-
-  const getOtherUser = (thread: Thread) => {
-    // Assuming userId is the current user
-    // Return the other person's info
-    if (thread.donorId._id === userId) {
-      return thread.recipientId;
+    try {
+      const token = await getToken();
+      if (token) {
+        await fetchChats(userId, token);
+      }
+    } finally {
+      setRefreshing(false);
     }
-    return thread.donorId;
   };
 
-  const filteredThreads = threads.filter((thread) => {
-    const otherUser = getOtherUser(thread);
-    return otherUser.name.toLowerCase().includes(searchText.toLowerCase());
+  const filteredChats = chats.filter((chat) => {
+    return chat.otherUser.name.toLowerCase().includes(searchText.toLowerCase());
   });
 
   const getInitials = (name: string) => {
@@ -102,14 +153,13 @@ export default function ChatListScreen() {
     });
   };
 
-  const renderChatRow = ({ item: thread }: { item: Thread }) => {
-    const otherUser = getOtherUser(thread);
-    const initials = getInitials(otherUser.name);
+  const renderChatRow = ({ item: chat }: { item: ChatListItem }) => {
+    const initials = getInitials(chat.otherUser.name);
 
     return (
       <TouchableOpacity
         style={styles.chatRow}
-        onPress={() => router.push(`/chat/${thread._id}`)}
+        onPress={() => router.push(`/chat/${chat._id}`)}
       >
         {/* Avatar */}
         <View style={styles.avatarContainer}>
@@ -121,25 +171,26 @@ export default function ChatListScreen() {
         {/* Chat info */}
         <View style={styles.chatInfo}>
           <View style={styles.nameRow}>
-            <Text style={styles.name}>{otherUser.name}</Text>
-            {thread.status === "locked" && (
+            <Text style={styles.name}>{chat.otherUser.name}</Text>
+            {chat.status === "locked" && (
               <MaterialIcons name="lock" size={14} color="#999" />
             )}
           </View>
           <Text style={styles.lastMessage} numberOfLines={1}>
-            Last message preview...
+            {chat.lastMessage || "No messages yet"}
           </Text>
         </View>
 
         {/* Timestamp */}
         <View style={styles.rightContainer}>
           <Text style={styles.timestamp}>
-            {formatTimestamp(thread.updatedAt)}
+            {formatTimestamp(chat.lastMessageTime)}
           </Text>
-          {/* Unread badge (placeholder) */}
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>2</Text>
-          </View>
+          {chat.unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{chat.unreadCount}</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -148,7 +199,13 @@ export default function ChatListScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#1A5F7A" />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Messages</Text>
+        </View>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#1A5F7A" />
+        </View>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </View>
     );
   }
@@ -165,7 +222,7 @@ export default function ChatListScreen() {
         <MaterialIcons name="search" size={20} color="#999" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search or start a new chat"
+          placeholder="Search chats..."
           placeholderTextColor="#999"
           value={searchText}
           onChangeText={setSearchText}
@@ -173,14 +230,14 @@ export default function ChatListScreen() {
       </View>
 
       {/* Chat List */}
-      {filteredThreads.length === 0 ? (
+      {filteredChats.length === 0 ? (
         <View style={styles.emptyContainer}>
           <MaterialIcons name="chat-bubble-outline" size={48} color="#ccc" />
           <Text style={styles.emptyText}>No chats yet</Text>
         </View>
       ) : (
         <FlatList
-          data={filteredThreads}
+          data={filteredChats}
           renderItem={renderChatRow}
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ paddingBottom: 90 }}
@@ -229,7 +286,7 @@ const styles = StyleSheet.create({
   chatRow: {
     flexDirection: "row",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 0.5,
     borderBottomColor: "#eee",
     alignItems: "center",
@@ -300,5 +357,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#999",
     marginTop: 12,
+  },
+  loadingBox: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

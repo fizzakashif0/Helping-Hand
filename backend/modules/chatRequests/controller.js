@@ -2,50 +2,47 @@ const ChatRequest = require("./model");
 const Notification = require("../notifications/model");
 const chatsController = require("../chats/controller");
 
-/**
- * Send a chat request to initiate messaging
- */
 exports.sendRequest = async (req, res) => {
   try {
+    console.log("=== SEND REQUEST BODY ===", req.body);
     const { donorId, recipientId, donationId } = req.body;
     if (!donorId || !recipientId || !donationId) {
-      return res.status(400).json({
-        message: "donorId, recipientId, and donationId are required",
-      });
+      return res.status(400).json({ message: "donorId, recipientId, and donationId are required" });
     }
 
-    // Check if request already exists
-    const existing = await ChatRequest.findOne({
-      donorId,
-      donationId,
-      status: "pending",
-    });
-
+    const existing = await ChatRequest.findOne({ donorId, recipientId, donationId, status: "pending" });
     if (existing) {
-      return res.status(409).json({
-        message: "A pending request already exists for this donation",
-        requestId: existing._id,
-      });
+      return res.status(409).json({ message: "A pending request already exists", requestId: existing._id });
     }
 
-    // Create chat request
-    const chatRequest = await ChatRequest.create({
-      donorId,
-      recipientId,
-      donationId,
-      status: "pending",
-    });
+    const chatRequest = await ChatRequest.create({ donorId, recipientId, donationId, status: "pending" });
 
-    // Notify the other user
-    const requesterId = String(donorId);
-    const otherUserId = String(recipientId);
+    const User = require("../auth/model");
+    const Donation = require("../donations/model");
+    const HelpRequest = require("../requests/model");
 
+    // Fetch sender (recipient) name
+    const sender = await User.findById(recipientId).select("name");
+    const senderName = sender?.name || "Someone";
+
+    // Try donations first, then help requests
+    let postTitle = "a donation";
+    const donation = await Donation.findById(donationId).select("description type");
+    if (donation) {
+      postTitle = donation.description || donation.type || "a donation";
+    } else {
+      const helpReq = await HelpRequest.findById(donationId).select("title description");
+      if (helpReq) postTitle = helpReq.title || helpReq.description || "a request";
+    }
+
+    // Always notify the DONOR (post owner) — they accept/reject
     await Notification.create({
-      receiverId: otherUserId,
-      senderId: requesterId,
+      receiverId: String(donorId),
+      senderId: String(recipientId),
+      senderName: senderName,
       type: "chat_request",
-      title: "New Chat Request",
-      message: "A donor wants to message you about a donation.",
+      title: `${senderName} wants your donation`,
+      message: `${senderName} wants "${postTitle}". Accept to start chatting.`,
       relatedRequestId: chatRequest._id,
       relatedDonationId: donationId,
     });
@@ -57,27 +54,18 @@ exports.sendRequest = async (req, res) => {
   }
 };
 
-/**
- * Accept a chat request and create a thread
- */
 exports.acceptRequest = async (req, res) => {
   try {
     const { id: requestId } = req.params;
-    const userId = req.user?.sub || req.userId;
+    const userId = req.user?.id || req.user?.sub || req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Find chat request
     const chatRequest = await ChatRequest.findById(requestId);
-    if (!chatRequest) {
-      return res.status(404).json({ message: "Request not found" });
-    }
+    if (!chatRequest) return res.status(404).json({ message: "Request not found" });
 
-    // Verify recipient is accepting
-    if (chatRequest.recipientId.toString() !== userId) {
-      return res.status(403).json({ message: "Only recipient can accept this request" });
+    // Only the donor (post owner) can accept
+    if (chatRequest.donorId.toString() !== userId) {
+      return res.status(403).json({ message: "Only the donor can accept this request" });
     }
 
     chatRequest.status = "accepted";
@@ -89,13 +77,34 @@ exports.acceptRequest = async (req, res) => {
       donationId: chatRequest.donationId,
     });
 
-    // Notify the requester
+    // Fetch donor name and post title for personalized message
+    const User = require("../auth/model");
+    const donor = await User.findById(userId).select("name");
+    const donorName = donor?.name || "The donor";
+    
+    let postTitle = "your request";
+    const Donation = require("../donations/model");
+    const HelpRequest = require("../requests/model");
+    const donation = await Donation.findById(chatRequest.donationId).select("description type");
+    if (donation) {
+      const firstLine = donation.description?.split("\n")[0] || donation.type || "a donation";
+      postTitle = `"${firstLine}"`;
+    } else {
+      const helpReq = await HelpRequest.findById(chatRequest.donationId).select("message title");
+      if (helpReq) {
+        const firstLine = helpReq.message?.split("\n")[0] || helpReq.title || "your request";
+        postTitle = `"${firstLine}"`;
+      }
+    }
+
+    // Notify the RECIPIENT — their request was accepted
     await Notification.create({
-      receiverId: chatRequest.donorId,
+      receiverId: chatRequest.recipientId,  // recipient gets notified
       senderId: userId,
+      senderName: donorName,
       type: "request_accepted",
-      title: "Request Accepted",
-      message: "Your chat request was accepted! You can now message them.",
+      title: "Request Accepted ✓",
+      message: `${donorName} accepted your request for ${postTitle}. You can now message them!`,
       relatedRequestId: chatRequest._id,
       relatedDonationId: chatRequest.donationId,
     });
@@ -107,40 +116,51 @@ exports.acceptRequest = async (req, res) => {
   }
 };
 
-/**
- * Decline a chat request
- */
 exports.declineRequest = async (req, res) => {
   try {
     const { id: requestId } = req.params;
-    const userId = req.user?.sub || req.userId;
+    const userId = req.user?.id || req.user?.sub || req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Find chat request
     const chatRequest = await ChatRequest.findById(requestId);
-    if (!chatRequest) {
-      return res.status(404).json({ message: "Request not found" });
+    if (!chatRequest) return res.status(404).json({ message: "Request not found" });
+
+    // Only the donor (post owner) can decline
+    if (chatRequest.donorId.toString() !== userId) {
+      return res.status(403).json({ message: "Only the donor can decline this request" });
     }
 
-    // Verify recipient is declining
-    if (chatRequest.recipientId.toString() !== userId) {
-      return res.status(403).json({ message: "Only recipient can decline this request" });
-    }
-
-    // Update status
     chatRequest.status = "declined";
     await chatRequest.save();
 
-    // Notify the requester
+    // Fetch donor name and post title for personalized message
+    const User = require("../auth/model");
+    const donor = await User.findById(userId).select("name");
+    const donorName = donor?.name || "The donor";
+    
+    let postTitle = "your request";
+    const Donation = require("../donations/model");
+    const HelpRequest = require("../requests/model");
+    const donation = await Donation.findById(chatRequest.donationId).select("description type");
+    if (donation) {
+      const firstLine = donation.description?.split("\n")[0] || donation.type || "a donation";
+      postTitle = `"${firstLine}"`;
+    } else {
+      const helpReq = await HelpRequest.findById(chatRequest.donationId).select("message title");
+      if (helpReq) {
+        const firstLine = helpReq.message?.split("\n")[0] || helpReq.title || "your request";
+        postTitle = `"${firstLine}"`;
+      }
+    }
+
+    // Notify the RECIPIENT — their request was declined
     await Notification.create({
-      receiverId: chatRequest.donorId,
+      receiverId: chatRequest.recipientId,  // recipient gets notified
       senderId: userId,
+      senderName: donorName,
       type: "request_declined",
       title: "Request Declined",
-      message: "Your chat request was declined.",
+      message: `${donorName} declined your request for ${postTitle}.`,
       relatedRequestId: chatRequest._id,
       relatedDonationId: chatRequest.donationId,
     });
@@ -152,28 +172,68 @@ exports.declineRequest = async (req, res) => {
   }
 };
 
-/**
- * Get all pending chat requests for a user
- */
 exports.getPendingRequests = async (req, res) => {
   try {
-    const userId = req.user?.sub || req.userId;
+    const mongoose = require("mongoose");
+    const userId = req.user?.id || req.user?.sub || req.userId;
+    console.log("=== PENDING userId ===", userId, typeof userId);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    // Debug: Check all pending records
+    const testFind = await ChatRequest.find({ status: "pending" }).limit(5);
+    console.log("=== ALL PENDING (no filter) ===", testFind.map(r => ({
+      donorId: r.donorId?.toString(),
+      donorIdType: typeof r.donorId,
+      recipientId: r.recipientId?.toString(),
+    })));
+
+    // Fix: Convert userId to ObjectId if it's a valid MongoDB ObjectId
+    let queryUserId = userId;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      queryUserId = new mongoose.Types.ObjectId(userId);
+      console.log("=== Converted userId to ObjectId ===", queryUserId);
     }
 
-    // Get pending requests where user is either donor or recipient
+    // Only return requests where user is the DONOR (post owner who needs to accept/reject)
     const requests = await ChatRequest.find({
-      $or: [{ donorId: userId }, { recipientId: userId }],
+      donorId: queryUserId,
       status: "pending",
     })
-      .populate("donorId", "name avatar")
-      .populate("recipientId", "name avatar")
-      .populate("donationId", "_id type description")
+      .populate("donorId", "name email")
+      .populate("recipientId", "name email")
       .sort({ createdAt: -1 });
 
-    return res.status(200).json(requests);
+    console.log("=== FOUND REQUESTS:", requests.length, requests.map(r => ({
+      donorId: r.donorId,
+      recipientId: r.recipientId,
+    })));
+    const HelpRequest = require("../requests/model");
+    const Donation = require("../donations/model");
+
+    const mapped = await Promise.all(requests.map(async (r) => {
+      let postTitle = "Donation Request";
+      if (r.donationId) {
+        const donation = await Donation.findById(r.donationId).select("title description");
+        if (donation) {
+          postTitle = donation.title || donation.description || "Donation Request";
+        } else {
+          const helpReq = await HelpRequest.findById(r.donationId).select("title description");
+          if (helpReq) postTitle = helpReq.title || helpReq.description || "Donation Request";
+        }
+      }
+
+      return {
+        _id: r._id,
+        postTitle,
+        // User is the donor (post owner), sender is the recipient who requested
+        senderUsername: r.recipientId?.name || r.recipientId?.email || "Someone",
+        type: "recipient_to_donor",
+        status: r.status,
+        createdAt: r.createdAt,
+      };
+    }));
+
+    return res.status(200).json(mapped);
   } catch (error) {
     console.error("Get pending requests error:", error);
     return res.status(500).json({ message: "Internal server error" });

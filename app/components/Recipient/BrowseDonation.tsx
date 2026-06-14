@@ -13,8 +13,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import { buildApiUrl } from "../../lib/api";
 import { timeAgo } from "../../lib/timeAgo";
 import { getToken } from "../../lib/token";
 import {
@@ -91,7 +92,7 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
       ? "Financial"
       : t.charAt(0).toUpperCase() + t.slice(1);
 
-  const handleContactDonor = async (item: DonationRecord) => {
+  const handleRequestDonation = async (item: DonationRecord) => {
     if (contactLoadingId) return;
     setContactLoadingId(item.id);
     try {
@@ -102,50 +103,57 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
       }
 
       const decoded: any = jwtDecode(token);
-      const recipientId = decoded?.sub || decoded?.id;
-      if (!recipientId) {
+      const senderId = decoded?.id || decoded?.sub;
+      if (!senderId) {
         Alert.alert("Error", "Could not decode user");
         return;
       }
+
+      // Get sender's username
+      const senderUsername = decoded?.name || decoded?.username || "Recipient";
 
       const donorId =
         (item as any).donorId ||
         (item as any).donor?._id ||
         (item as any).userId;
-
+ console.log("=== REQUEST DONATION ===", {
+    senderId,        // logged in recipient
+    donorId,         // donation post owner
+    postId: item.id,
+    fullItem: item   // pura object dekho
+  });
       if (!donorId) {
         Alert.alert("Error", "Donor not found on this post");
         return;
       }
 
-      const donationId = item.id;
+      const postId = item.id;
+      const postTitle = item.title;
 
-      const response = await fetch("http://localhost:5000/api/chats", {
+      // Call the chat requests API
+      const response = await fetch(buildApiUrl("/api/chat-requests"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ donorId, recipientId, donationId }),
+        body: JSON.stringify({
+          donorId: donorId,
+          recipientId: senderId,
+          donationId: postId,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
 
-      if (response.status === 409) {
-        const threadId = data.threadId || data._id;
-        if (threadId) {
-          router.push(`/chat/${threadId}`);
-          return;
-        }
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to send request");
       }
 
-      if (!response.ok) throw new Error(data?.message || "Failed to start chat");
-
-      const threadId = data._id || data.threadId || data.id;
-      router.push(`/chat/${threadId}`);
+      Alert.alert("Success", "Request sent! Wait for their response.");
     } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to start chat");
-      console.error("Contact donor error:", error);
+      Alert.alert("Error", error?.message || "Failed to send request");
+      console.error("Request donation error:", error);
     } finally {
       setContactLoadingId(null);
     }
@@ -272,32 +280,20 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
                   </Text>
 
                   <View style={styles.actionBtns}>
-                    {/* Contact Donor button */}
+                    {/* Request button */}
                     <Pressable
-                      style={styles.contactBtn}
-                      onPress={() => handleContactDonor(item)}
-                      disabled={!!contactLoadingId}
+                      style={[
+                        styles.requestBtn,
+                        isContactLoading && styles.requestBtnDisabled,
+                      ]}
+                      onPress={() => handleRequestDonation(item)}
+                      disabled={isContactLoading}
                     >
                       {isContactLoading ? (
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
-                        <>
-                          <Ionicons
-                            name="chatbubble-outline"
-                            size={14}
-                            color="#fff"
-                          />
-                          <Text style={styles.contactText}>Contact Donor</Text>
-                        </>
+                        <Text style={styles.requestText}>Request This</Text>
                       )}
-                    </Pressable>
-
-                    {/* Request button */}
-                    <Pressable
-                      style={styles.requestBtn}
-                      onPress={() => router.push(`/recipient-donation/${item.id}`)}
-                    >
-                      <Text style={styles.requestText}>Request</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -402,14 +398,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
-  requestText: { color: "#fff" },
-
-  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { color: "#fff" },
-  emptyList: { textAlign: "center", color: "#fff", marginTop: 24 },
-
+  requestBtnDisabled: {
+    opacity: 0.6,
+  },
+  requestText: { color: "#fff", fontSize: 13 },
+  loadingBox: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: { color: "#fff", fontSize: 14 },
+  emptyList: { color: "#999", textAlign: "center", paddingVertical: 40 },
   typeFood: { backgroundColor: "#22C55E" },
   typeClothes: { backgroundColor: "#3B82F6" },
-  typeBlood: { backgroundColor: "#B91C1C" },
+  typeBlood: { backgroundColor: "#DC2626" },
   typeFinancial: { backgroundColor: "#F59E0B" },
 });

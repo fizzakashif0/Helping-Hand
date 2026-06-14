@@ -1,20 +1,10 @@
 const Notification = require("./model");
 const mongoose = require("mongoose");
-const crypto = require("crypto");
-
-function convertToObjectId(stringId) {
-  if (!stringId) return null;
-  if (mongoose.Types.ObjectId.isValid(stringId)) {
-    return stringId;
-  }
-  const hash = crypto.createHash("md5").update(String(stringId)).digest("hex").substring(0, 24);
-  return hash;
-}
 
 exports.listForUser = async (req, res) => {
   try {
-    const userId = convertToObjectId(req.query.userId || req.userId);
-    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const items = await Notification.find({ receiverId: userId })
       .sort({ createdAt: -1 })
@@ -29,8 +19,8 @@ exports.listForUser = async (req, res) => {
 
 exports.unreadCount = async (req, res) => {
   try {
-    const userId = convertToObjectId(req.query.userId || req.userId);
-    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const count = await Notification.countDocuments({ receiverId: userId, isRead: false });
     res.json({ count });
@@ -42,8 +32,9 @@ exports.unreadCount = async (req, res) => {
 exports.markRead = async (req, res) => {
   try {
     const body = req.body || {};
-    const userId = convertToObjectId(body.userId || req.userId);
+    const userId = req.user?.id;
     const { notificationId, markAll } = body;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     if (markAll) {
       await Notification.updateMany({ receiverId: userId, isRead: false }, { isRead: true });

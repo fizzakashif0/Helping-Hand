@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -21,6 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { buildApiUrl } from "../../lib/api";
 import { getToken } from "../../lib/token";
 import {
   DonationRecord,
@@ -112,52 +114,53 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
   const handleContactRecipient = async () => {
     if (!selectedRequest) return;
     setChatLoading(true);
+    console.log("=== FULL REQUEST OBJECT ===", JSON.stringify(selectedRequest));  // ← add karo
+  
     try {
       const token = await getToken();
       if (!token) throw new Error("Not authenticated");
 
       const decoded: any = jwtDecode(token);
-      const donorId = decoded?.sub || decoded?.id;
-      if (!donorId) throw new Error("Could not decode user");
+      const senderId = decoded?.id || decoded?.sub;
+      if (!senderId) throw new Error("Could not decode user");
+
+      // Get sender's username (try multiple sources)
+      const senderUsername = decoded?.name || decoded?.username || "Donor";
 
       const recipientId =
         (selectedRequest as any).recipientId ||
         (selectedRequest as any).recipient?._id ||
         (selectedRequest as any).userId;
+  console.log("=== IDs ===", { senderId, recipientId, postId: selectedRequest.id }); // ← add karo
+      const postId = selectedRequest.id;
+      const postTitle = selectedRequest.title;
 
-      const donationId = selectedRequest.id;
-
-      // Create or fetch existing thread
-      const response = await fetch("http://localhost:5000/api/chats", {
+      // Call the chat requests API
+      const response = await fetch(buildApiUrl("/api/chat-requests"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ donorId, recipientId, donationId }),
+       
+        body: JSON.stringify({
+  donorId: recipientId,    // post owner (help-request creator) — notification yahan jaani chahiye
+  recipientId: senderId,   // logged-in donor jo help offer kar raha hai
+  donationId: postId,
+}),
       });
-
+    
+console.log("=== RESPONSE STATUS ===", response.status); //
       const data = await response.json().catch(() => ({}));
+      console.log("=== RESPONSE DATA ===", data);
 
-      // 409 means thread already exists — backend returns the existing threadId
-      if (response.status === 409) {
-        const threadId = data.threadId || data._id;
-        if (threadId) {
-          closeModal();
-          router.push(`/chat/${threadId}`);
-          return;
-        }
-      }
+      if (!response.ok) throw new Error(data?.message || "Failed to send request");
 
-      if (!response.ok) throw new Error(data?.message || "Failed to start chat");
-
-      const threadId = data._id || data.threadId || data.id;
+      Alert.alert("Success", "Request sent! Wait for their response.");
       closeModal();
-      router.push(`/chat/${threadId}`);
     } catch (error: any) {
       console.error("Contact recipient error:", error);
-      // Still close modal and try to navigate if we have partial info
-      closeModal();
+      Alert.alert("Error", error?.message || "Failed to send request");
     } finally {
       setChatLoading(false);
     }

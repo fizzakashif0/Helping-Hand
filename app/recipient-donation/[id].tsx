@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
 import {
   ArrowLeft,
   Clock,
@@ -17,10 +18,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { jwtDecode } from "jwt-decode";
-import { getToken } from "../lib/token";
 import { buildApiUrl } from "../lib/api";
 import { timeAgo } from "../lib/timeAgo";
+import { getToken } from "../lib/token";
 import { DonationRecord, getDonations } from "../store/donationStore";
 
 const typeColors: Record<string, string> = {

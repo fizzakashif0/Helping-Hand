@@ -1,34 +1,22 @@
 const Request = require("./model");
 const Donation = require("../donations/model");
 const mongoose = require("mongoose");
-const crypto = require("crypto");
 const { setLocationGeoFromBody, calculateDistanceKm, DEFAULT_BROWSE_RADIUS_KM } = require("../../shared/geospatial");
-
-// Helper function to convert string IDs to valid MongoDB ObjectIds
-function convertToObjectId(stringId) {
-  if (!stringId) return null;
-  
-  if (mongoose.Types.ObjectId.isValid(stringId)) {
-    return stringId;
-  }
-  
-  // For demo/string IDs, generate a consistent hex string that looks like an ObjectId
-  const hash = crypto.createHash("md5").update(stringId).digest("hex").substring(0, 24);
-  return hash;
-}
 
 // Create a new help request
 exports.createRequest = async (req, res) => {
   try {
     const body = req.body || {};
-    const requesterId = body.userId || body.requester;
-    const validRequesterId = convertToObjectId(requesterId);
+    const requesterId = req.user?.id;
+    if (!requesterId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
 
     const loc = body.location || {};
     const locationGeo = setLocationGeoFromBody(loc);
 
     const requestData = {
-      requester: validRequesterId,
+      requester: requesterId,
       postType: "request",
       type: body.type,
       message: body.message || body.description,
@@ -71,8 +59,7 @@ exports.getRequestsByRequester = async (req, res) => {
     const { requesterId } = req.params;
     if (!requesterId) return res.status(400).json({ message: "requesterId is required" });
 
-    const validRequesterId = convertToObjectId(requesterId);
-    const requests = await Request.find({ requester: validRequesterId, postType: "request" })
+    const requests = await Request.find({ requester: requesterId, postType: "request" })
       .populate("donation")
       .sort({ createdAt: -1 });
     res.json(requests);

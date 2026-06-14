@@ -14,9 +14,9 @@ import {
   View,
 } from "react-native";
 import FeedbackForm from "../components/FeedbackForm";
+import { buildApiUrl } from "../lib/api";
 import { getToken } from "../lib/token";
 import * as socketService from "../services/socketService";
-import { buildApiUrl } from "../lib/api";
 
 
 import ChatBubble from "../components/ChatBubble";
@@ -61,26 +61,21 @@ export default function ChatScreen() {
 
   useEffect(() => {
     const init = async () => {
-      try {
-        const token = await getToken();
-        if (!token) {
-          console.warn("ChatScreen: missing auth token");
-          return;
-        }
-        const decoded: any = jwtDecode(token);
-        const uid = decoded?.sub || decoded?.id;
-        if (!uid) {
-          console.warn("ChatScreen: unable to decode userId from JWT");
-          return;
-        }
-        setUserId(uid);
+  try {
+    const token = await getToken();
+    if (!token) { console.warn("ChatScreen: missing auth token"); return; }
+    const decoded: any = jwtDecode(token);
+    const uid = decoded?.id || decoded?.sub;
+    if (!uid) { console.warn("ChatScreen: unable to decode userId"); return; }
+    setUserId(uid);
 
-        await fetchThread(uid);
-        connectSocket();
-      } catch (e) {
-        console.error("ChatScreen init error:", e);
-      }
-    };
+    await socketService.connectSocket();
+    await fetchThread(uid);
+    setupSocketListeners();
+  } catch (e) {
+    console.error("ChatScreen init error:", e);
+  }
+};
 
     init();
 
@@ -100,24 +95,29 @@ export default function ChatScreen() {
       setLoading(true);
       const token = await getToken();
       
-      // Direct fetch with token instead of axios chatApi
+      // Fetch from the chats API
       const response = await fetch(buildApiUrl(`/api/chats/${threadId}`), {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
+
+      if (!response.ok) {
+        console.error("Failed to fetch chat:", response.status);
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
-      setThread(data);
+      setThread({
+        _id: data._id,
+        status: data.status || "active",
+        donorId: data.donorId || { _id: "", name: "Donor" },
+        recipientId: data.recipientId || { _id: "", name: "Recipient" },
+      });
   
-      const messagesRes = await fetch(
-        buildApiUrl(`/api/messages/${threadId}/messages`),
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      const messagesData = await messagesRes.json();
-      setMessages(Array.isArray(messagesData) ? messagesData : []);
+    
   
       socketService.markRead(threadId as string);
     } catch (error) {
@@ -136,34 +136,27 @@ export default function ChatScreen() {
     setShowFeedback(true);
   };
 
-  const connectSocket = () => {
-    socketService.connectSocket();
+const setupSocketListeners = () => {
+  socketService.joinThread(threadId as string, (messages: any[]) => {
+    setMessages(messages);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  });
 
-    // Join thread and get history
-    socketService.joinThread(threadId as string);
+  socketService.onNewMessage((message) => {
+    setMessages((prev) => [...prev, message]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  });
 
+  socketService.onTyping((data) => {
+    if (data.senderId !== userId) setIsTyping(true);
+  });
 
-    // Listen for new messages
-    socketService.onNewMessage((message) => {
-      setMessages((prev) => [...prev, message]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    });
+  socketService.onStopTyping((data) => {
+    if (data.senderId !== userId) setIsTyping(false);
+  });
 
-    // Listen for typing
-    socketService.onTyping((data) => {
-      if (data.senderId !== userId) {
-        setIsTyping(true);
-      }
-    });
-
-    socketService.onStopTyping((data) => {
-      if (data.senderId !== userId) {
-        setIsTyping(false);
-      }
-    });
-
-    socketService.onRequestFeedback(onRequestFeedback);
-  };
+  socketService.onRequestFeedback(onRequestFeedback);
+};
 
   const onSubmitSuccess = () => {
     // no-op (FeedbackForm manages UI)

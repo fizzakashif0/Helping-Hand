@@ -1,7 +1,7 @@
 import { SelectedPickupLocation } from "../components/common/LocationPicker";
 import { buildApiUrl } from "../lib/api";
 import { fromBackendDonationType } from "../lib/donations";
-
+import { getToken } from "../lib/token";
 export type RequestRecord = {
   id: string;
   type: "clothes" | "food" | "blood" | "financial";
@@ -13,6 +13,7 @@ export type RequestRecord = {
   location: string;
   urgency: "low" | "medium" | "high";
   status: "pending" | "approved" | "rejected" | "completed" | "matched";
+  
 };
 
 let requests: RequestRecord[] = [
@@ -145,6 +146,7 @@ export async function createRequest(requestData: {
   quantity?: string;
   location?: SelectedPickupLocation | null;
   urgency?: "low" | "medium" | "high";
+  userId: string;
 }) {
   try {
     const locationPayload: any = {
@@ -162,14 +164,15 @@ export async function createRequest(requestData: {
         lng: requestData.location.longitude,
       };
     }
-
+const token = await getToken();
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        userId: "demo-requester-id", // Using demo ID for now
+        userId: "requestData.userId", 
         type: requestData.type === "financial" ? "money" : requestData.type,
         message: requestData.description,
         quantityText: requestData.quantity || "Not specified",

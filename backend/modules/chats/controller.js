@@ -66,7 +66,7 @@ exports.createThreadFromIds = async ({ donorId, recipientId, donationId }) => {
  */
 exports.getThreadsByUser = async (req, res) => {
   try {
-    const userId = req.user?.sub || req.userId;
+    const userId = req.user?.id || req.user?.sub || req.userId;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -95,7 +95,7 @@ exports.getThreadsByUser = async (req, res) => {
 exports.getThreadById = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.sub || req.userId;
+   const userId = req.user?.id || req.user?.sub || req.userId;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -131,7 +131,7 @@ exports.getThreadById = async (req, res) => {
 exports.lockThread = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.sub || req.userId;
+    const userId = req.user?.id || req.user?.sub || req.userId;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });

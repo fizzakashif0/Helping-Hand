@@ -59,13 +59,19 @@ export async function fetchNotifications(userId: string) {
 
 export async function fetchUnreadNotificationCount(userId: string): Promise<number> {
   try {
-    const response = await apiFetch(
-      `${API_URL}/unread-count?userId=${encodeURIComponent(userId)}`,
-      { userId }
-    );
-    if (!response.ok) throw new Error("Failed to fetch unread count");
+    const token = await (await import("../lib/token")).getToken();
+    if (!token) return 0;
+    
+    const response = await fetch(buildApiUrl("/api/chat-requests/pending"), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) return 0;
     const data = await response.json();
-    return data.count || 0;
+    const pendingRequests = Array.isArray(data) ? data : [];
+    return pendingRequests.length;
   } catch (error) {
     console.error("Error fetching unread notification count:", error);
     return 0;

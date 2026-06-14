@@ -1,6 +1,6 @@
+import { jwtDecode } from "jwt-decode";
 import { io } from "socket.io-client";
 import { getToken } from "../lib/token";
-import { jwtDecode } from "jwt-decode";
 
 // TODO: move to .env when configured
 const API_URL = "http://localhost:5000";
@@ -54,7 +54,7 @@ export const disconnectSocket = () => {
   }
 };
 
-export const joinThread = (threadId: string) => {
+export const joinThread = (threadId: string, onHistory?: (messages: any[]) => void) => {
   if (!socket) {
     console.error("Socket not connected");
     return;
@@ -65,6 +65,9 @@ export const joinThread = (threadId: string) => {
       console.error("Error joining thread:", response.error);
     } else {
       console.log("Joined thread, received history:", response.messages?.length);
+      if (onHistory && Array.isArray(response.messages)) {
+        onHistory(response.messages);
+      }
     }
   });
 };

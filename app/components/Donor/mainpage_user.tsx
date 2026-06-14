@@ -1,20 +1,20 @@
 
-import { useRouter } from "expo-router";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import {
-    ArrowRight,
-    Bell,
-    Heart,
-    MapPin,
-    TrendingUp
+  ArrowRight,
+  Bell,
+  Heart,
+  MapPin,
+  TrendingUp
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
-    Modal,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import {
   DonationRecord,
@@ -96,12 +96,15 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
             <Text style={styles.subtitle}>Make a difference today</Text>
           </View>
 
-          <TouchableOpacity style={styles.bell}>
-            <Bell color="white" size={24} />
-            <View style={styles.notification}>
-              <Text style={styles.notificationText}>3</Text>
-            </View>
-          </TouchableOpacity>
+          <TouchableOpacity 
+  style={styles.bell}
+  onPress={() => router.push("/notifications")}
+>
+  <Bell color="white" size={24} />
+  <View style={styles.notification}>
+    <Text style={styles.notificationText}>!</Text>
+  </View>
+</TouchableOpacity>
         </View>
 
         {/* Stats */}

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
 import {
   Modal,
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getToken } from "../../lib/token";
 import { createRequest } from "../../store/requestStore";
 import LocationPicker, { SelectedPickupLocation } from "../common/LocationPicker";
 
@@ -81,6 +83,11 @@ export default function CreateHelpRequestForm({
     }
 
     setLoading(true);
+    const token = await getToken();
+if (!token) { showPopup("Error", "Please login first"); return; }
+const decoded: any = jwtDecode(token);
+const userId = decoded?.id || decoded?.sub;
+if (!userId) { showPopup("Error", "Could not get user ID"); return; }
     try {
       await createRequest({
         type: formData.type as any,
@@ -89,6 +96,7 @@ export default function CreateHelpRequestForm({
         quantity: trimmedQuantity,
         location,
         urgency: formData.urgency as "low" | "medium" | "high",
+        userId: userId,
       });
 
       showPopup("Success", "Help request submitted successfully.", onSubmit);

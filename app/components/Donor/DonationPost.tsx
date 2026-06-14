@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
 import {
   Modal,
@@ -11,15 +12,13 @@ import {
 } from "react-native";
 import { buildApiUrl, getApiBaseUrl } from "../../lib/api";
 import {
-  DEMO_DONOR_ID,
   DonationType,
-  toBackendDonationType,
+  toBackendDonationType
 } from "../../lib/donations";
+import { getToken } from "../../lib/token";
 import { addDonation } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 import LocationPicker, { SelectedPickupLocation } from "../common/LocationPicker";
-
-
 interface CreateDonationFormProps {
   onSubmit: () => void;
   onBack: () => void;
@@ -91,6 +90,11 @@ export function CreateDonationForm({
     }
 
     setLoading(true);
+    const token = await getToken();
+if (!token) { showPopup("Error", "Please login first"); return; }
+const decoded: any = jwtDecode(token);
+const userId = decoded?.id || decoded?.sub;
+if (!userId) { showPopup("Error", "Could not get user ID"); return; }
     try {
       const apiBaseUrl = getApiBaseUrl();
       if (!apiBaseUrl) {
@@ -101,7 +105,7 @@ export function CreateDonationForm({
 
       // Create donation object for backend
       const donationData: any = {
-        userId: DEMO_DONOR_ID,
+        userId: userId,
         type: toBackendDonationType(formData.type as DonationType),
         description: `${trimmedTitle}\n${trimmedDescription}`,
         quantityText: trimmedQuantity || "Not specified",
@@ -127,14 +131,16 @@ export function CreateDonationForm({
           address: trimmedLocation,
         };
       }
-
+console.log("Token being sent:", token);
+console.log("Auth header:", `Bearer ${token}`);
       console.log("Sending donation data:", donationData); // Debug log
 
       // Submit to backend
       const response = await fetch(buildApiUrl("/api/donations"), {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(donationData)
       });

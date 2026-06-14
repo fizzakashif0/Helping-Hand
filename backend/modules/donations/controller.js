@@ -1,18 +1,6 @@
 const Donation = require("./model");
 const mongoose = require("mongoose");
-const crypto = require("crypto");
 const { setLocationGeoFromBody, calculateDistanceKm, DEFAULT_BROWSE_RADIUS_KM } = require("../../shared/geospatial");
-
-function convertToObjectId(stringId) {
-  if (!stringId) return null;
-
-  if (mongoose.Types.ObjectId.isValid(stringId)) {
-    return stringId;
-  }
-
-  const hash = crypto.createHash("md5").update(stringId).digest("hex").substring(0, 24);
-  return hash;
-}
 
 function toPublicDonation(doc, distanceKm) {
   const d = doc.toObject ? doc.toObject() : doc;
@@ -131,14 +119,16 @@ async function findBrowseableDonations({ lat, lng, radiusKm = DEFAULT_BROWSE_RAD
 exports.createDonation = async (req, res) => {
   try {
     const body = req.body || {};
-    const donorId = body.userId || body.donor;
-    const validDonorId = convertToObjectId(donorId);
+    const donorId = req.user?.id;
+    if (!donorId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
 
     const loc = body.location || {};
     const locationGeo = setLocationGeoFromBody(loc);
 
     const donationData = {
-      donor: validDonorId,
+      donor: donorId,
       type: body.type,
       postType: "donation",
       description: body.description,
@@ -169,8 +159,7 @@ exports.getMyDonations = async (req, res) => {
     const userId = req.query.userId || req.params.donorId;
     if (!userId) return res.status(400).json({ message: "userId is required" });
 
-    const validUserId = convertToObjectId(userId);
-    const donations = await Donation.find({ donor: validUserId, postType: "donation" }).sort({
+    const donations = await Donation.find({ donor: userId, postType: "donation" }).sort({
       createdAt: -1,
     });
     res.json(donations);
@@ -235,8 +224,7 @@ exports.getDonationsByDonor = async (req, res) => {
     const { donorId } = req.params;
     const { status } = req.query;
 
-    const validDonorId = convertToObjectId(donorId);
-    const query = { donor: validDonorId };
+    const query = { donor: donorId };
     if (status) query.status = status;
 
     const donations = await Donation.find(query).sort({ createdAt: -1 });

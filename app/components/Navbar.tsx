@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router";
 import {
-    Bell,
-    Heart,
-    Home,
-    PlusCircle,
-    User,
+  Bell,
+  Heart,
+  Home,
+  PlusCircle,
+  User,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";

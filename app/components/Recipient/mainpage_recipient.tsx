@@ -1,28 +1,28 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import {
-    ArrowRight,
-    Bell,
-    Calendar,
-    HandHeart,
-    Search,
-    Shield
+  ArrowRight,
+  Bell,
+  Calendar,
+  HandHeart,
+  Search,
+  Shield
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { DEMO_REQUESTER_ID } from "../../lib/donations";
 import {
-    DonationRecord,
-    fetchAvailableDonationsDetached,
-    fetchBrowseDonationsDetached,
+  DonationRecord,
+  fetchAvailableDonationsDetached,
+  fetchBrowseDonationsDetached,
 } from "../../store/donationStore";
 import { fetchUnreadNotificationCount } from "../../store/notificationStore";
 import BottomNav, { NavItem } from "../Navbar";
@@ -105,7 +105,7 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
             </View>
             <TouchableOpacity 
               style={styles.bellButton}
-              onPress={() => router.push("/recipient-notifications")}
+              onPress={() => router.push("/notifications")}
             >
               <Bell size={24} color="white" />
               {notifCount > 0 ? (
