@@ -3,14 +3,17 @@ import { useRouter } from "expo-router";
 import {
   ArrowRight,
   Bell,
-  Heart,
   MapPin,
+  Plus,
   TrendingUp
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   Modal,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
@@ -20,7 +23,6 @@ import {
   fetchAvailableDonationsDetached,
   fetchBrowseDonationsDetached,
 } from "../../store/donationStore";
-import styles from "../../styles/MainStyle";
 import BottomNav, { NavItem } from "../Navbar";
 import DonationFeed from "./DonationFeed";
 
@@ -60,7 +62,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         const fallback = await fetchAvailableDonationsDetached();
         setNearbyRequests(fallback.slice(0, 3));
       } catch (fallbackError) {
-        console.error("Fallback nearby requests fetch failed:", fallbackError);
+        console.error("Fallback fetch failed:", fallbackError);
       }
     } finally {
       setLoadingRequests(false);
@@ -74,9 +76,8 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         const data = await res.json();
         setActiveEvents(data.events ?? []);
       }
-    } catch (_) {
-      // silently fail
-    } finally {
+    } catch (_) {}
+    finally {
       setLoadingEvents(false);
     }
   }, []);
@@ -87,33 +88,28 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
   }, [loadNearbyRequests, loadEvents]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerRow}>
+          <View style={styles.headerTop}>
             <View>
-              <Text style={styles.title}>Welcome, Donor</Text>
-              <Text style={styles.subtitle}>Make a difference today</Text>
+              <Text style={styles.welcomeText}>Welcome, Donor</Text>
+              <Text style={styles.subWelcomeText}>Make a difference today</Text>
             </View>
-
-            <TouchableOpacity style={styles.bell}>
-              <Bell color="white" size={24} />
-              <View style={styles.notification}>
-                <Text style={styles.notificationText}>3</Text>
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => router.push("/notifications")}
+            >
+              <Bell size={24} color="white" />
+              <View style={styles.badgeCount}>
+                <Text style={styles.badgeText}>3</Text>
               </View>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-  style={styles.bell}
-  onPress={() => router.push("/notifications")}
->
-  <Bell color="white" size={24} />
-  <View style={styles.notification}>
-    <Text style={styles.notificationText}>!</Text>
-  </View>
-</TouchableOpacity>
           {/* Stats */}
           <View style={styles.statsRow}>
             {[
@@ -121,8 +117,8 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
               { label: "Active", value: 8 },
               { label: "Helped", value: 45 },
             ].map((item) => (
-              <View key={item.label} style={styles.statCard}>
-                <Text style={styles.statValue}>{item.value}</Text>
+              <View key={item.label} style={styles.statBox}>
+                <Text style={styles.statNum}>{item.value}</Text>
                 <Text style={styles.statLabel}>{item.label}</Text>
               </View>
             ))}
@@ -130,36 +126,46 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
         </View>
 
         {/* Quick Actions */}
-        <View style={styles.quickActions}>
+        <View style={styles.actionsGrid}>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.primaryBtn]}
+            style={styles.actionButtonWhite}
             onPress={() => router.push("/create")}
           >
-            <Heart color="#1A5F7A" size={24} />
-            <Text style={styles.primaryText}>Create Donation</Text>
+            <Plus size={24} color="#1A5F7A" />
+            <Text style={styles.actionButtonTextBlue}>Create Donation</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={[styles.actionBtn, styles.secondaryBtn]}
+            style={styles.actionButtonGhost}
             onPress={() => setFeedModalVisible(true)}
           >
-            <MapPin color="white" size={24} />
-            <Text style={styles.secondaryText}>Browse Requests</Text>
+            <MapPin size={24} color="white" />
+            <Text style={styles.actionButtonTextWhite}>Browse Requests</Text>
           </TouchableOpacity>
         </View>
 
         {/* NGO Events */}
-        <SectionHeader
-          title="NGO Events"
-          onPress={() => onNavigate("ngo-events")}
-        />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>NGO Events</Text>
+          <TouchableOpacity
+            style={styles.seeAllBtn}
+            onPress={() => onNavigate("ngo-events")}
+          >
+            <Text style={styles.seeAllText}>See All </Text>
+            <ArrowRight size={14} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        </View>
 
         {loadingEvents && (
-          <Text style={styles.cardSub}>Loading events...</Text>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading events...</Text>
+          </View>
         )}
 
         {!loadingEvents && activeEvents.length === 0 && (
-          <Text style={styles.cardSub}>No active NGO events right now.</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No active NGO events right now</Text>
+            <Text style={styles.emptySubtext}>Check back soon!</Text>
+          </View>
         )}
 
         {!loadingEvents && activeEvents.map((event) => (
@@ -168,46 +174,50 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
             style={styles.card}
             onPress={() => router.push(`/event-details/${event._id}` as any)}
           >
-            <Text style={styles.emoji}>📅</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{event.name}</Text>
-              <Text style={styles.cardSub}>{event.ngoName}</Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: event.targetParticipants > 0
-                        ? `${Math.min((event.participants / event.targetParticipants) * 100, 100)}%`
-                        : '0%'
-                    },
-                  ]}
-                />
+            <View style={styles.cardContent}>
+              <View style={styles.emojiContainer}>
+                <Text style={styles.emojiText}>📅</Text>
               </View>
-              <Text style={styles.progressText}>
-                {event.participants}/{event.targetParticipants || '?'} participants • {event.startDate}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{event.name}</Text>
+                <Text style={styles.cardSubtitle}>{event.ngoName}</Text>
+                <Text style={styles.cardStats}>
+                  {event.participants}/{event.targetParticipants || "?"} participants
+                  {event.startDate ? ` • ${event.startDate}` : ""}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         ))}
 
         {/* Nearby Requests */}
-        <SectionHeader
-          title="Nearby Requests"
-          onPress={() => router.push("/donation-feed")}
-        />
+        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+          <Text style={styles.sectionTitle}>Nearby Requests</Text>
+          <TouchableOpacity
+            style={styles.seeAllBtn}
+            onPress={() => router.push("/donation-feed")}
+          >
+            <Text style={styles.seeAllText}>See All </Text>
+            <ArrowRight size={14} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        </View>
 
         {loadingRequests && (
-          <Text style={styles.cardSub}>Loading nearby requests...</Text>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading nearby requests...</Text>
+          </View>
+        )}
+
+        {!loadingRequests && nearbyRequests.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No nearby requests</Text>
+            <Text style={styles.emptySubtext}>Check back soon!</Text>
+          </View>
         )}
 
         {!loadingRequests && nearbyRequests.map((donation) => {
-          const urgency =
-            donation.status === "pending"
-              ? "high"
-              : donation.status === "in-progress"
-              ? "medium"
-              : "low";
+          const urgency = donation.status === "pending" ? "high"
+            : donation.status === "in-progress" ? "medium" : "low";
           const type = donation.type.charAt(0).toUpperCase() + donation.type.slice(1);
 
           return (
@@ -217,42 +227,49 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
               onPress={() => onNavigate(`donation-details-${donation.id}`)}
             >
               <View style={styles.badgeRow}>
-                <View
-                  style={[
-                    styles.badge,
-                    urgency === "high"
-                      ? styles.badgeRed
-                      : styles.badgeYellow,
-                  ]}
-                >
-                  <Text style={styles.badgeText}>
+                <View style={[
+                  styles.typeBadge,
+                  urgency === "high" ? styles.badgeRed : styles.badgeYellow
+                ]}>
+                  <Text style={styles.typeBadgeText}>
                     {urgency === "high" ? "Urgent" : urgency === "medium" ? "Medium" : "Low"}
                   </Text>
                 </View>
-                <Text style={styles.typeText}>{type}</Text>
-              </View>
-
-              <Text style={styles.cardTitle}>{donation.title}</Text>
-
-              <View style={styles.locationRow}>
-                <MapPin size={14} color="#ffffffaa" />
                 <Text style={styles.locationText}>{donation.location}</Text>
               </View>
+              <Text style={styles.cardTitle}>{donation.title}</Text>
+              <Text style={styles.cardSubtitle}>{type}</Text>
             </TouchableOpacity>
           );
         })}
 
-        {/* Impact */}
-        <View style={styles.impactCard}>
-          <TrendingUp color="white" size={24} />
-          <Text style={styles.cardTitle}>Your Impact</Text>
-          <Text style={styles.cardSub}>This month</Text>
-
-          <View style={styles.impactRow}>
-            <ImpactItem label="People Helped" value="45" />
-            <ImpactItem label="Items Donated" value="128" />
+        {/* Impact Card */}
+        <TouchableOpacity style={[styles.card, { marginTop: 24 }]}>
+          <View style={styles.statusHeader}>
+            <View style={styles.calendarIconBg}>
+              <TrendingUp size={24} color="white" />
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Your Impact</Text>
+              <Text style={styles.cardSubtitle}>This month</Text>
+            </View>
           </View>
-        </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>45</Text>
+              <Text style={styles.statLabel}>People Helped</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>128</Text>
+              <Text style={styles.statLabel}>Items Donated</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>12</Text>
+              <Text style={styles.statLabel}>Donations</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
       </ScrollView>
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -267,7 +284,7 @@ export default function DonorHome({ onNavigate }: DonorHomeProps) {
           onNavigate={onNavigate}
         />
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -275,19 +292,236 @@ function SectionHeader({ title, onPress }: any) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <TouchableOpacity onPress={onPress} style={styles.seeAll}>
-        <Text style={styles.seeAllText}>See All</Text>
-        <ArrowRight size={14} color="white" />
+      <TouchableOpacity onPress={onPress} style={styles.seeAllBtn}>
+        <Text style={styles.seeAllText}>See All </Text>
+        <ArrowRight size={14} color="rgba(255,255,255,0.7)" />
       </TouchableOpacity>
     </View>
   );
 }
 
-function ImpactItem({ label, value }: any) {
-  return (
-    <View style={styles.impactItem}>
-      <Text style={styles.cardSub}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1A5F7A',
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  welcomeText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  subWelcomeText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+  },
+  bellButton: {
+    padding: 8,
+  },
+  badgeCount: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  statNum: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginTop: -15,
+    gap: 12,
+  },
+  actionButtonWhite: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButtonGhost: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    gap: 8,
+  },
+  actionButtonTextBlue: {
+    color: '#1A5F7A',
+    fontWeight: '600',
+  },
+  actionButtonTextWhite: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  seeAllText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  cardContent: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  emojiContainer: {
+    width: 60,
+    height: 60,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiText: {
+    fontSize: 28,
+  },
+  cardTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cardSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+  },
+  cardStats: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeRed: {
+    backgroundColor: '#EF4444',
+  },
+  badgeYellow: {
+    backgroundColor: '#F59E0B',
+  },
+  typeBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  locationText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  calendarIconBg: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 10,
+    borderRadius: 12,
+  },
+  loadingContainer: {
+    marginHorizontal: 20,
+    padding: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  emptyContainer: {
+    marginHorizontal: 20,
+    padding: 32,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+  },
+});

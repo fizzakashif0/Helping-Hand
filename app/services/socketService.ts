@@ -72,13 +72,13 @@ export const joinThread = (threadId: string, onHistory?: (messages: any[]) => vo
   });
 };
 
-export const sendMessage = (threadId: string, text: string) => {
+export const sendMessage = (threadId: string, text: string, attachments?: any[]) => {
   if (!socket) {
     console.error("Socket not connected");
     return;
   }
 
-  socket.emit("send_message", { threadId, text }, (response: any) => {
+  socket.emit("send_message", { threadId, text, attachments }, (response: any) => {
     if (response.error) {
       console.error("Error sending message:", response.error);
     } else {
@@ -86,7 +86,6 @@ export const sendMessage = (threadId: string, text: string) => {
     }
   });
 };
-
 export const emitTyping = (threadId: string) => {
   if (!socket) {
     console.error("Socket not connected");

@@ -16,8 +16,21 @@ const messageSchema = new mongoose.Schema(
     },
     text: {
       type: String,
-      required: true,
+      default: "",
     },
+    attachments: [
+      {
+        type: { type: String, enum: ["file", "location"] },
+        filename: String,
+        fileSize: Number,
+        mimeType: String,
+        latitude: Number,
+        longitude: Number,
+        landmark: String,
+        areaName: String,
+        fullAddress: String,
+      },
+    ],
     readAt: {
       type: Date,
       default: null,

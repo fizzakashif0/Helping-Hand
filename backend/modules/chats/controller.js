@@ -72,7 +72,6 @@ exports.getThreadsByUser = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Find all threads where user is donor or recipient
     const threads = await ChatThread.find({
       $or: [{ donorId: userId }, { recipientId: userId }],
     })
@@ -81,7 +80,27 @@ exports.getThreadsByUser = async (req, res) => {
       .populate("donationId", "_id type description")
       .sort({ updatedAt: -1 });
 
-    return res.status(200).json(threads);
+    // For each thread fetch last message + unread count
+    const enriched = await Promise.all(threads.map(async (thread) => {
+      const lastMsg = await Message.findOne({ threadId: thread._id })
+        .sort({ createdAt: -1 })
+        .select("text createdAt senderId");
+
+      const unreadCount = await Message.countDocuments({
+        threadId: thread._id,
+        senderId: { $ne: userId },
+        readAt: null,
+      });
+
+      return {
+        ...thread.toObject(),
+        lastMessage: lastMsg?.text || "No messages yet",
+        lastMessageTime: lastMsg?.createdAt || thread.updatedAt,
+        unreadCount,
+      };
+    }));
+
+    return res.status(200).json(enriched);
   } catch (error) {
     console.error("Get threads error:", error);
     return res.status(500).json({ message: "Internal server error" });

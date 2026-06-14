@@ -86,62 +86,56 @@ function initializeSocket(server) {
      * send_message: Client sends a message in a thread
      * Emits: new_message to all clients in the thread room
      */
-    socket.on("send_message", async (data, callback) => {
-      try {
-        const { threadId, text } = data;
+   socket.on("send_message", async (data, callback) => {
+  try {
+    const { threadId, text, attachments } = data;
 
-        if (!text || !text.trim()) {
-          return callback({ error: "Message text is required" });
-        }
+    if (!text?.trim() && (!attachments || attachments.length === 0)) {
+      return callback({ error: "Message text or attachment is required" });
+    }
 
-        // Check thread exists and is active
-        const thread = await ChatThread.findById(threadId);
-        if (!thread) {
-          return callback({ error: "Thread not found" });
-        }
+    const thread = await ChatThread.findById(threadId);
+    if (!thread) {
+      return callback({ error: "Thread not found" });
+    }
 
-        if (thread.status !== "active") {
-          io.to(threadId).emit("error", { message: "Chat is closed" });
-          return callback({ error: "Chat is closed" });
-        }
+    if (thread.status !== "active") {
+      return callback({ error: "Chat is closed" });
+    }
 
-        // Verify user belongs to thread
-        const isDonor = thread.donorId.toString() === socket.userId;
-        const isRecipient = thread.recipientId.toString() === socket.userId;
+    const isDonor = thread.donorId.toString() === socket.userId;
+    const isRecipient = thread.recipientId.toString() === socket.userId;
 
-        if (!isDonor && !isRecipient) {
-          return callback({ error: "Forbidden" });
-        }
+    if (!isDonor && !isRecipient) {
+      return callback({ error: "Forbidden" });
+    }
 
-        // Create and save message
-        const message = await Message.create({
-          threadId,
-          senderId: socket.userId,
-          text: text.trim(),
-        });
-
-        // Populate sender info
-        await message.populate("senderId", "name profilePicture");
-
-        // Update thread's updatedAt
-        thread.updatedAt = new Date();
-        await thread.save();
-
-        // Emit to entire thread room
-        io.to(threadId).emit("new_message", {
-          _id: message._id,
-          senderId: message.senderId,
-          text: message.text,
-          createdAt: message.createdAt,
-        });
-
-        callback({ success: true });
-      } catch (error) {
-        console.error("send_message error:", error);
-        callback({ error: error.message });
-      }
+    const message = await Message.create({
+      threadId,
+      senderId: socket.userId,
+      text: text?.trim() || "",
+      attachments: attachments || [],
     });
 
+    await message.populate("senderId", "name profilePicture");
+
+    thread.updatedAt = new Date();
+    await thread.save();
+
+    io.to(threadId).emit("new_message", {
+      _id: message._id,
+      senderId: message.senderId,
+      text: message.text,
+      attachments: message.attachments,
+      createdAt: message.createdAt,
+    });
+
+    callback({ success: true });
+  } catch (error) {
+    console.error("send_message error:", error);
+    callback({ error: error.message });
+  }
+});
     /**
      * typing: Broadcast that user is typing
      */
