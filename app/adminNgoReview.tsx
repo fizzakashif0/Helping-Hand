@@ -20,22 +20,25 @@ interface NGODocument {
   uploadedAt: string;
 }
 
-interface NGO {
+interface NGOUser {
   _id: string;
   name: string;
   email: string;
+}
+
+interface NGO {
+  _id: string;
+  userId: NGOUser;
+  organizationName: string;
+  registrationId?: string;
+  orgType?: string;
+  missionStatement?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  documents: NGODocument[];
+  verificationStatus: "pending" | "verified" | "rejected";
   createdAt: string;
-  ngoProfile: {
-    orgName: string;
-    registrationNumber?: string;
-    orgType?: string;
-    missionStatement?: string;
-    phone?: string;
-    address?: string;
-    website?: string;
-    documents: NGODocument[];
-    verificationStatus: "pending" | "approved" | "rejected";
-  };
 }
 
 export default function NGOReviewScreen() {
@@ -45,7 +48,6 @@ export default function NGOReviewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Reject modal state
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -70,21 +72,23 @@ export default function NGOReviewScreen() {
     }
   };
 
- const handleApprove = async (id: string, orgName: string) => {
-  setActionLoading(true);
-  try {
-    const response = await apiFetch(`/api/admin/ngos/${id}/approve`, {
-      method: "PUT",
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message);
-    setNgos((prev) => prev.filter((n) => n._id !== id));
-  } catch (err) {
-    Alert.alert("Error", err instanceof Error ? err.message : "Failed to approve");
-  } finally {
-    setActionLoading(false);
-  }
-};
+  const handleApprove = async (id: string) => {
+    setActionLoading(true);
+    try {
+      const response = await apiFetch(`/api/admin/ngos/${id}/approve`, {
+        method: "PUT",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      setNgos((prev) => prev.filter((n) => n._id !== id));
+      Alert.alert("Approved", "The NGO application has been approved.");
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to approve");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const openRejectModal = (id: string) => {
     setRejectingId(id);
     setRejectReason("");
@@ -129,7 +133,6 @@ export default function NGOReviewScreen() {
     });
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.container}>
@@ -147,7 +150,6 @@ export default function NGOReviewScreen() {
     );
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <View style={styles.container}>
@@ -168,10 +170,8 @@ export default function NGOReviewScreen() {
     );
   }
 
-  // ── Main ───────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#fff" />
@@ -180,7 +180,6 @@ export default function NGOReviewScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Count badge */}
       <View style={styles.countBar}>
         <Clock size={16} color="#fbbf24" />
         <Text style={styles.countText}>
@@ -200,7 +199,6 @@ export default function NGOReviewScreen() {
             const isExpanded = expandedId === ngo._id;
             return (
               <View key={ngo._id} style={styles.card}>
-                {/* Card Header */}
                 <TouchableOpacity
                   style={styles.cardHeader}
                   onPress={() => toggleExpand(ngo._id)}
@@ -210,9 +208,9 @@ export default function NGOReviewScreen() {
                     <Building2 size={22} color="#8B5CF6" />
                   </View>
                   <View style={styles.cardHeaderText}>
-                    <Text style={styles.orgName}>{ngo.ngoProfile.orgName}</Text>
+                    <Text style={styles.orgName}>{ngo.organizationName}</Text>
                     <Text style={styles.orgMeta}>
-                      {ngo.ngoProfile.orgType?.replace("_", " ") || "General"} • Applied {formatDate(ngo.createdAt)}
+                      {ngo.orgType?.replace("_", " ") || "General"} • Applied {formatDate(ngo.createdAt)}
                     </Text>
                   </View>
                   {isExpanded
@@ -221,30 +219,18 @@ export default function NGOReviewScreen() {
                   }
                 </TouchableOpacity>
 
-                {/* Expanded Details */}
                 {isExpanded && (
                   <View style={styles.cardBody}>
                     <View style={styles.divider} />
 
-                    <Detail label="Contact Person" value={ngo.name} />
-                    <Detail label="Email" value={ngo.email} />
-                    {ngo.ngoProfile.phone && (
-                      <Detail label="Phone" value={ngo.ngoProfile.phone} />
-                    )}
-                    {ngo.ngoProfile.registrationNumber && (
-                      <Detail label="Registration No." value={ngo.ngoProfile.registrationNumber} />
-                    )}
-                    {ngo.ngoProfile.address && (
-                      <Detail label="Address" value={ngo.ngoProfile.address} />
-                    )}
-                    {ngo.ngoProfile.website && (
-                      <Detail label="Website" value={ngo.ngoProfile.website} />
-                    )}
-                    {ngo.ngoProfile.missionStatement && (
-                      <Detail label="Mission Statement" value={ngo.ngoProfile.missionStatement} />
-                    )}
+                    <Detail label="Contact Person" value={ngo.userId?.name || "—"} />
+                    <Detail label="Email" value={ngo.userId?.email || "—"} />
+                    {ngo.phone && <Detail label="Phone" value={ngo.phone} />}
+                    {ngo.registrationId && <Detail label="Registration No." value={ngo.registrationId} />}
+                    {ngo.address && <Detail label="Address" value={ngo.address} />}
+                    {ngo.website && <Detail label="Website" value={ngo.website} />}
+                    {ngo.missionStatement && <Detail label="Mission Statement" value={ngo.missionStatement} />}
 
-                    {/* Action Buttons */}
                     <View style={styles.actions}>
                       <TouchableOpacity
                         style={[styles.actionBtn, styles.rejectBtn, actionLoading && { opacity: 0.6 }]}
@@ -257,7 +243,7 @@ export default function NGOReviewScreen() {
 
                       <TouchableOpacity
                         style={[styles.actionBtn, styles.approveBtn, actionLoading && { opacity: 0.6 }]}
-                        onPress={() => handleApprove(ngo._id, ngo.ngoProfile.orgName)}
+                        onPress={() => handleApprove(ngo._id)}
                         disabled={actionLoading}
                       >
                         <CheckCircle size={18} color="#fff" />
@@ -272,7 +258,6 @@ export default function NGOReviewScreen() {
         </ScrollView>
       )}
 
-      {/* Reject Modal */}
       <Modal
         visible={rejectModalVisible}
         transparent

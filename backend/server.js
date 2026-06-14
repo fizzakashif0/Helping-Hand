@@ -47,6 +47,7 @@ const messageRoutes = require("./modules/messages/routes");
 const chatRequestRoutes = require("./modules/chatRequests/routes");
 const adminRoutes = require('./modules/admin/routes');
 const reviewRoutes = require('./modules/reviews/routes');
+const eventRoutes = require('./modules/events/routes');
 
 app.use('/api/reviews', reviewRoutes);
 app.use("/api/auth", authRoutes);
@@ -57,7 +58,8 @@ app.use("/api/donation-requests", donationRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/home", homeRoutes);
 app.use('/api/admin', adminRoutes);
-
+app.use('/api/ngos', require('./modules/ngos/routes'));
+app.use('/api/events', eventRoutes);
 
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
