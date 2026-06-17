@@ -1,13 +1,11 @@
 const Review = require("./model").Review;
 const User = require("../users/model");
-const reviewQueue = require("./reviewQueue");
 
 exports.createReview = async (req, res) => {
   try {
     const { donationId, revieweeId, role, text } = req.body;
-    const reviewerId = req.user?.sub; // From JWT token
+    const reviewerId = req.user?.id || req.user?.sub;
 
-    // Validate required fields
     if (!donationId || !revieweeId || !role || !text) {
       return res.status(400).json({
         message: "donationId, revieweeId, role, and text are required",
@@ -20,7 +18,7 @@ exports.createReview = async (req, res) => {
       });
     }
 
-    // Create Review document with status 'pending'
+    // Save review as pending first
     const review = await Review.create({
       reviewer: reviewerId,
       reviewee: revieweeId,
@@ -30,25 +28,48 @@ exports.createReview = async (req, res) => {
       status: "pending",
     });
 
-    // Enqueue job to Bull queue
-    await reviewQueue.add(
-      {
-        reviewId: review._id,
-        text,
-        revieweeId,
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 2000,
-        },
-      }
-    );
+    // Call ML service
+    let mlResult;
+    try {
+      const mlResponse = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      mlResult = await mlResponse.json();
+    } catch (mlError) {
+      console.error("ML service error:", mlError);
+      mlResult = { status: "accepted", stars: 3, sentiment: "NEUTRAL", toxScore: 0 };
+    }
 
-    // Return 202: Review submitted and being processed
-    return res.status(202).json({
-      message: "Review submitted and being processed",
+    // Update review with ML result
+    review.status = mlResult.status;
+    review.sentiment = mlResult.sentiment;
+    review.toxScore = mlResult.toxScore;
+    review.stars = mlResult.status === "accepted" ? mlResult.stars : null;
+    review.rejectReason = mlResult.rejectReason || null;
+    await review.save();
+
+    // If accepted, update reviewee trust score
+    if (mlResult.status === "accepted") {
+      const reviewee = await User.findById(revieweeId);
+      if (reviewee) {
+        const oldScore = reviewee.trustScore || 0;
+        const oldCount = reviewee.reviewCount || 0;
+        const newRawScore = (oldScore * oldCount * 0.9 + mlResult.stars) / (oldCount * 0.9 + 1);
+        const newScore = Math.round((newRawScore / 5) * 100);
+        await User.findByIdAndUpdate(revieweeId, {
+          trustScore: newScore,
+          reviewCount: oldCount + 1,
+        });
+      }
+    }
+
+    return res.status(201).json({
+      message: mlResult.status === "accepted"
+        ? "Review submitted successfully"
+        : "Review was rejected: " + mlResult.rejectReason,
+      status: mlResult.status,
       reviewId: review._id,
     });
   } catch (error) {
@@ -61,16 +82,11 @@ exports.getUserReviews = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get user with their trust score and review count
-    const user = await User.findById(userId).select(
-      "trustScore reviewCount"
-    );
-
+    const user = await User.findById(userId).select("trustScore reviewCount");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Get all accepted reviews for that user
     const reviews = await Review.find({
       reviewee: userId,
       status: "accepted",

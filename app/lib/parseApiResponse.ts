@@ -6,7 +6,7 @@ export type ApiMessageBody = {
 /**
  * Reads response body safely so auth screens never fail silently on non-JSON errors.
  */
-export async function parseApiResponse<T extends ApiMessageBody = ApiMessageBody>(
+export  async function parseApiResponse<T extends ApiMessageBody = ApiMessageBody>(
   response: Response
 ): Promise<{ ok: boolean; status: number; data: T }> {
   const text = await response.text();

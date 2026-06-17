@@ -5,7 +5,7 @@ const TOKEN_KEY = "auth_token";
 /**
  * Save JWT token to AsyncStorage
  */
-export async function saveToken(token: string): Promise<void> {
+export  async function saveToken(token: string): Promise<void> {
   try {
     await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch (error) {

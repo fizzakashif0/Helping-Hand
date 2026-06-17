@@ -165,6 +165,92 @@ function initializeSocket(server) {
     });
 
     /**
+ * mark_complete: One user marks donation as complete
+ * If both users mark complete → lock thread + request feedback from both
+ */
+socket.on("mark_complete", async (data, callback) => {
+  try {
+    const { threadId } = data;
+    const Notification = require("./modules/notifications/model");
+
+    const threadCheck = await ChatThread.findById(threadId)
+      .populate("donorId", "name")
+      .populate("recipientId", "name");
+
+    if (!threadCheck) return callback({ error: "Thread not found" });
+
+    const isDonor = threadCheck.donorId._id.toString() === socket.userId;
+    const isRecipient = threadCheck.recipientId._id.toString() === socket.userId;
+    if (!isDonor && !isRecipient) return callback({ error: "Forbidden" });
+
+    const alreadyMarked = (threadCheck.completedBy || []).some(
+      (id) => id.toString() === socket.userId
+    );
+    if (alreadyMarked) return callback({ error: "Already marked complete" });
+
+    // Atomically push and fetch updated doc in one query
+   const mongoose = require("mongoose");
+const thread = await ChatThread.findByIdAndUpdate(
+  threadId,
+  { $addToSet: { completedBy: new mongoose.Types.ObjectId(socket.userId) } },
+  { new: true }
+).populate("donorId", "name").populate("recipientId", "name");
+
+    const completedBy = thread.completedBy || [];
+    const bothCompleted = completedBy.length >= 2;
+
+    const otherUserId = isDonor
+      ? thread.recipientId._id.toString()
+      : thread.donorId._id.toString();
+
+    const userName = isDonor
+      ? thread.donorId.name
+      : thread.recipientId.name;
+
+    if (bothCompleted) {
+      await ChatThread.findByIdAndUpdate(threadId, {
+        status: "locked",
+        lockedAt: new Date(),
+      });
+
+      io.to(threadId).emit("chat_locked", { threadId });
+
+      io.to(thread.donorId._id.toString()).emit("request_feedback", {
+        donationId: thread.donationId,
+        revieweeId: thread.recipientId._id,
+        role: "donor",
+      });
+
+      io.to(thread.recipientId._id.toString()).emit("request_feedback", {
+        donationId: thread.donationId,
+        revieweeId: thread.donorId._id,
+        role: "recipient",
+      });
+
+      callback({ success: true, bothCompleted: true });
+    } else {
+      await Notification.create({
+        receiverId: otherUserId,
+        senderId: socket.userId,
+        type: "completion_requested",
+        title: "Donation Marked Complete",
+        message: `${userName} has marked this donation as complete. Mark it complete too to close the chat.`,
+        relatedDonationId: thread.donationId,
+      });
+
+      io.to(otherUserId).emit("completion_requested", {
+        threadId,
+        fromUser: userName,
+      });
+
+      callback({ success: true, bothCompleted: false });
+    }
+  } catch (error) {
+    console.error("mark_complete error:", error);
+    callback({ error: error.message });
+  }
+});
+    /**
      * mark_read: Mark messages as read in a thread
      */
     socket.on("mark_read", async (data, callback) => {

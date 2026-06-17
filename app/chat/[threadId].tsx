@@ -72,9 +72,10 @@ export default function ChatScreen() {
 
   // File attachment states
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [selectedAttachment, setSelectedAttachment] = useState<Attachment | null>(null);
-
+const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+const [selectedAttachment, setSelectedAttachment] = useState<Attachment | null>(null);
+const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+const [isCompleting, setIsCompleting] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -109,7 +110,9 @@ export default function ChatScreen() {
       socketService.offTyping();
       socketService.offStopTyping();
       socketService.offRequestFeedback();
-      socketService.disconnectSocket();
+socketService.offChatLocked();
+socketService.offCompletionRequested();
+socketService.disconnectSocket();
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,7 +190,31 @@ export default function ChatScreen() {
       setIsLoadingLocation(false);
     }
   };
+const handleMarkComplete = () => {
+  setShowAttachmentMenu(false);
+  setShowCompleteConfirm(true);
+};
 
+const confirmMarkComplete = () => {
+  setShowCompleteConfirm(false);
+  setIsCompleting(true);
+
+  socketService.markComplete(threadId as string, (response: any) => {
+    setIsCompleting(false);
+    if (response.error) {
+      Alert.alert("Error", response.error);
+      return;
+    }
+    if (response.bothCompleted) {
+      // Chat will lock via socket event
+    } else {
+      Alert.alert(
+        "Marked Complete",
+        "The other user has been notified. Chat will lock when they confirm too."
+      );
+    }
+  });
+};
   const handleSendWithAttachment = () => {
     if (!inputText.trim() && !selectedAttachment) return;
 
@@ -219,6 +246,8 @@ export default function ChatScreen() {
     });
 
     socketService.onRequestFeedback((data) => {
+      
+
       setFeedbackData({
         donationId: data.donationId,
         revieweeId: data.revieweeId,
@@ -226,7 +255,20 @@ export default function ChatScreen() {
       });
       setShowFeedback(true);
     });
+     socketService.onChatLocked(() => {
+  setThread((prev) => prev ? { ...prev, status: "locked" } : prev);
+  socketService.onCompletionRequested((data) => {
+  Alert.alert(
+    "Donation Complete",
+    `${data.fromUser} has marked this donation as complete. Mark it complete too to close the chat.`
+  );
+});
+});
+
+
+
   };
+ 
 
   const onSubmitSuccess = () => {
     // no-op (FeedbackForm manages UI)
@@ -431,15 +473,30 @@ export default function ChatScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.attachmentOption}
-                  onPress={() => {
-                    Alert.alert("Files", "File upload feature coming soon");
-                    setShowAttachmentMenu(false);
-                  }}
-                >
-                  <MaterialIcons name="attach-file" size={24} color="#007AFF" />
-                  <Text style={styles.attachmentOptionText}>Upload File</Text>
-                </TouchableOpacity>
+  style={styles.attachmentOption}
+  onPress={() => {
+    Alert.alert("Files", "File upload feature coming soon");
+    setShowAttachmentMenu(false);
+  }}
+>
+  <MaterialIcons name="attach-file" size={24} color="#007AFF" />
+  <Text style={styles.attachmentOptionText}>Upload File</Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[styles.attachmentOption, { borderTopWidth: 1, borderTopColor: "#eee" }]}
+  onPress={handleMarkComplete}
+  disabled={isCompleting}
+>
+  {isCompleting ? (
+    <ActivityIndicator size="small" color="#E53E3E" />
+  ) : (
+    <MaterialIcons name="check-circle" size={24} color="#E53E3E" />
+  )}
+  <Text style={[styles.attachmentOptionText, { color: "#E53E3E" }]}>
+    Mark as Complete
+  </Text>
+</TouchableOpacity>
               </View>
             </TouchableOpacity>
           </Modal>
@@ -490,7 +547,37 @@ export default function ChatScreen() {
           </Text>
         </View>
       )}
-
+{/* Mark Complete Confirmation Modal */}
+<Modal
+  visible={showCompleteConfirm}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowCompleteConfirm(false)}
+>
+  <View style={styles.confirmOverlay}>
+    <View style={styles.confirmCard}>
+      <MaterialIcons name="check-circle" size={40} color="#E53E3E" />
+      <Text style={styles.confirmTitle}>Mark as Complete?</Text>
+      <Text style={styles.confirmMessage}>
+        This will notify the other user. Once both confirm, the chat will be locked and the donation will be closed.
+      </Text>
+      <View style={styles.confirmButtons}>
+        <TouchableOpacity
+          style={styles.confirmCancelBtn}
+          onPress={() => setShowCompleteConfirm(false)}
+        >
+          <Text style={styles.confirmCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.confirmProceedBtn}
+          onPress={confirmMarkComplete}
+        >
+          <Text style={styles.confirmProceedText}>Proceed</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
       {/* Feedback Form Modal */}
       <FeedbackForm
         visible={showFeedback}
@@ -687,6 +774,61 @@ const styles = StyleSheet.create({
   sendButtonActive: {
     backgroundColor: "#1A5F7A",
   },
+  confirmOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: 24,
+},
+confirmCard: {
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 24,
+  alignItems: "center",
+  gap: 12,
+  width: "100%",
+},
+confirmTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#111",
+},
+confirmMessage: {
+  fontSize: 14,
+  color: "#555",
+  textAlign: "center",
+  lineHeight: 20,
+},
+confirmButtons: {
+  flexDirection: "row",
+  gap: 12,
+  marginTop: 8,
+  width: "100%",
+},
+confirmCancelBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: "#ddd",
+  alignItems: "center",
+},
+confirmCancelText: {
+  color: "#666",
+  fontWeight: "600",
+},
+confirmProceedBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 8,
+  backgroundColor: "#E53E3E",
+  alignItems: "center",
+},
+confirmProceedText: {
+  color: "#fff",
+  fontWeight: "600",
+},
   closedBanner: {
     flexDirection: "row",
     alignItems: "center",

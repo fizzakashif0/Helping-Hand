@@ -114,8 +114,7 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
   const handleContactRecipient = async () => {
     if (!selectedRequest) return;
     setChatLoading(true);
-    console.log("=== FULL REQUEST OBJECT ===", JSON.stringify(selectedRequest));  // ← add karo
-  
+    
     try {
       const token = await getToken();
       if (!token) throw new Error("Not authenticated");
@@ -127,13 +126,31 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
       // Get sender's username (try multiple sources)
       const senderUsername = decoded?.name || decoded?.username || "Donor";
 
+      // ============= DEBUG: Log full request object to identify fields =============
+      console.log("\n🔍 [DonationFeed] FULL REQUEST OBJECT:", JSON.stringify(selectedRequest, null, 2));
+      console.log("🔍 [DonationFeed] Request keys:", Object.keys(selectedRequest));
+      console.log("🔍 [DonationFeed] Extracted senderId (logged-in donor):", senderId);
+      // =============================================================================
+
+      // Extract recipient ID - for help requests, the creator is stored as 'requester'
       const recipientId =
-        (selectedRequest as any).recipientId ||
-        (selectedRequest as any).recipient?._id ||
-        (selectedRequest as any).userId;
-  console.log("=== IDs ===", { senderId, recipientId, postId: selectedRequest.id }); // ← add karo
+        (selectedRequest as any).requester?._id ||           // most common: populated requester object
+        (selectedRequest as any).requester ||                // fallback: just the ID string
+        (selectedRequest as any).recipientId ||              // legacy fallback
+        (selectedRequest as any).recipient?._id ||           // another fallback
+        (selectedRequest as any).userId;                     // last resort
+      
       const postId = selectedRequest.id;
       const postTitle = selectedRequest.title;
+
+      // ============= DEBUG: Log IDs being sent to API =============
+      console.log("\n📤 [DonationFeed] IDs BEFORE fetch:", {
+        donorId: senderId,
+        recipientId: recipientId,
+        donationId: postId,
+        flow: "Donor browsing Help Requests",
+      });
+      // ===========================================================
 
       // Call the chat requests API
       const response = await fetch(buildApiUrl("/api/chat-requests"), {
@@ -142,15 +159,14 @@ export default function DonationFeed({ onNavigate, onBack }: DonationFeedProps) 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-       
         body: JSON.stringify({
-  donorId: recipientId,    // post owner (help-request creator) — notification yahan jaani chahiye
-  recipientId: senderId,   // logged-in donor jo help offer kar raha hai
-  donationId: postId,
-}),
+          donorId: senderId,     // logged-in donor offering help
+          recipientId: recipientId,   // request creator needing help
+          donationId: postId,
+        }),
       });
     
-console.log("=== RESPONSE STATUS ===", response.status); //
+      console.log("✅ [DonationFeed] Response status:", response.status);
       const data = await response.json().catch(() => ({}));
       console.log("=== RESPONSE DATA ===", data);
 

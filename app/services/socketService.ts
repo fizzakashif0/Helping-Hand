@@ -187,7 +187,33 @@ export const onRequestFeedback = (callback: (data: any) => void) => {
 
   socket.on("request_feedback", callback);
 };
+export const markComplete = (threadId: string, callback: (response: any) => void) => {
+  if (!socket) {
+    console.error("Socket not connected");
+    return;
+  }
+  socket.emit("mark_complete", { threadId }, callback);
+};
 
+export const onChatLocked = (callback: (data: any) => void) => {
+  if (!socket) return;
+  socket.off("chat_locked");
+  socket.on("chat_locked", callback);
+};
+
+export const onCompletionRequested = (callback: (data: any) => void) => {
+  if (!socket) return;
+  socket.off("completion_requested");
+  socket.on("completion_requested", callback);
+};
+
+export const offChatLocked = () => {
+  if (socket) socket.off("chat_locked");
+};
+
+export const offCompletionRequested = () => {
+  if (socket) socket.off("completion_requested");
+};
 export const offRequestFeedback = () => {
   if (socket) {
     socket.off("request_feedback");

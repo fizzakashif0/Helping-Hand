@@ -24,7 +24,7 @@ interface CreateDonationFormProps {
   onBack: () => void;
 }
 
-export function CreateDonationForm({
+export default function CreateDonationForm({
   onSubmit,
   onBack,
 }: CreateDonationFormProps) {
@@ -379,23 +379,7 @@ console.log("Auth header:", `Bearer ${token}`);
           </View>
         </View>
 
-        {/* Upload */}
-        <View style={styles.card}>
-          <Text style={styles.label}>Add Photos (Optional)</Text>
-          <TouchableOpacity style={styles.uploadBox}>
-            {[
-              <Ionicons
-                key="icon"
-                name="cloud-upload-outline"
-                size={32}
-                color="#999"
-              />,
-              <Text key="hint" style={styles.uploadText}>
-                Tap to upload photos
-              </Text>,
-            ]}
-          </TouchableOpacity>
-        </View>
+      
 
         {/* Submit */}
         <TouchableOpacity
@@ -607,5 +591,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateDonationForm;
 

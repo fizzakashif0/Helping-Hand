@@ -207,9 +207,17 @@ export default function DonorProfile({
               >
                 <Text style={styles.name}>{user?.name}</Text>
                 {trustScore !== null && (
-                  <Text style={styles.trustBadge}>
-                    ⭐ Trust Score: {trustScore}/100
-                  </Text>
+                <View style={[styles.trustBadgePill, {
+  backgroundColor: trustScore >= 70 ? "#16A34A" : trustScore >= 40 ? "#2563EB" : "#DC2626"
+}]}>
+ <View style={[styles.trustBadgePill, {
+  backgroundColor: trustScore >= 70 ? "#16A34A" : trustScore >= 40 ? "#2563EB" : "#DC2626"
+}]}>
+  <Text style={styles.trustBadgeText}>
+    ⭐ {trustScore}/100
+  </Text>
+</View>
+</View>
                 )}
               </View>
               <Text style={styles.email}>{user?.email}</Text>
@@ -349,6 +357,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
     overflow: "hidden",
   },
+  trustBadgePill: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 20,
+},
+trustBadgeText: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "600",
+},
   menuRow: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12 },
   borderBottom: { borderBottomWidth: 1, borderBottomColor: "#E5E7EB" },
   menuIcon: {

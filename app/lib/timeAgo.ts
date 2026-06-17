@@ -1,4 +1,4 @@
-export function timeAgo(dateString: string | undefined): string {
+export  function timeAgo(dateString: string | undefined): string {
   if (!dateString) {
     return "Recently";
   }

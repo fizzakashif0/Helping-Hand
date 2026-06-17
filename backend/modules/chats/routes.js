@@ -15,5 +15,6 @@ router.get("/:id", verifyToken, chatController.getThreadById);
 
 // PATCH /:id/lock - Lock a thread (auth required)
 router.patch("/:id/lock", verifyToken, chatController.lockThread);
-
+// PATCH /:id/complete - Mark thread as complete (auth required)
+router.patch("/:id/complete", verifyToken, chatController.markComplete);
 module.exports = router;

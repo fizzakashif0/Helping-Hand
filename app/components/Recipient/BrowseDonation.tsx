@@ -112,16 +112,19 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
       // Get sender's username
       const senderUsername = decoded?.name || decoded?.username || "Recipient";
 
+      // ============= DEBUG: Log full donation object to identify fields =============
+      console.log("\n🔍 [BrowseDonation] FULL DONATION OBJECT:", JSON.stringify(item, null, 2));
+      console.log("🔍 [BrowseDonation] Donation keys:", Object.keys(item));
+      console.log("🔍 [BrowseDonation] Extracted senderId (logged-in recipient):", senderId);
+      // ==============================================================================
+
+      // Extract donor ID - API exposes as 'donorId', backend stores as 'donor'
       const donorId =
-        (item as any).donorId ||
-        (item as any).donor?._id ||
-        (item as any).userId;
- console.log("=== REQUEST DONATION ===", {
-    senderId,        // logged in recipient
-    donorId,         // donation post owner
-    postId: item.id,
-    fullItem: item   // pura object dekho
-  });
+        (item as any).donorId ||                  // API response includes donorId
+        (item as any).donor?._id ||               // fallback: populated donor object
+        (item as any).donor ||                    // fallback: just the ID string
+        (item as any).userId;                     // last resort
+      
       if (!donorId) {
         Alert.alert("Error", "Donor not found on this post");
         return;
@@ -129,6 +132,15 @@ export default function BrowseDonations({ onBack }: BrowseDonationsProps) {
 
       const postId = item.id;
       const postTitle = item.title;
+
+      // ============= DEBUG: Log IDs being sent to API =============
+      console.log("\n📤 [BrowseDonation] IDs BEFORE fetch:", {
+        donorId: donorId,
+        recipientId: senderId,
+        donationId: postId,
+        flow: "Recipient browsing Available Donations",
+      });
+      // ===========================================================
 
       // Call the chat requests API
       const response = await fetch(buildApiUrl("/api/chat-requests"), {

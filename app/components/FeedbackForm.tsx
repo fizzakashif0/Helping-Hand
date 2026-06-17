@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/chatApi";
 
 interface FeedbackFormProps {
@@ -52,7 +52,7 @@ export default function FeedbackForm({
     const wordCount = countWords(reviewText);
 
     if (wordCount < 4) {
-      Alert.alert("Too Short", "Please write at least 4 words in your review.");
+      Alert.alert("Too Short", "Please write at least 3 words in your review.");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function FeedbackForm({
             <TouchableOpacity onPress={onDismiss} disabled={submitted}>
               <MaterialIcons name="close" size={24} color="#666" />
             </TouchableOpacity>
-            <Text style={styles.title}>How was your experience?</Text>
+            <Text style={styles.title}>Leave a Review for {role === "donor" ? "Recipient" : "Donor"}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -124,17 +124,17 @@ export default function FeedbackForm({
 
               <View style={styles.wordCount}>
                 <Text style={styles.wordCountText}>
-                  {countWords(reviewText)} / 4 words minimum
+                  {reviewText.length} / 500 characters · min 3 words
                 </Text>
               </View>
 
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  countWords(reviewText) < 4 && styles.submitButtonDisabled,
+                  countWords(reviewText) < 3 && styles.submitButtonDisabled,
                 ]}
                 onPress={handleSubmit}
-                disabled={loading || countWords(reviewText) < 4}
+                disabled={loading || countWords(reviewText) < 3}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" />
@@ -144,7 +144,7 @@ export default function FeedbackForm({
               </TouchableOpacity>
 
               <Text style={styles.privacyNote}>
-                Your review is private. Only your trust score is shown publicly.
+                Your feedback is private. The other person won't see your review.
               </Text>
             </View>
           )}

@@ -4,8 +4,8 @@ const chatsController = require("../chats/controller");
 
 exports.sendRequest = async (req, res) => {
   try {
-    console.log("=== SEND REQUEST BODY ===", req.body);
     const { donorId, recipientId, donationId } = req.body;
+    
     if (!donorId || !recipientId || !donationId) {
       return res.status(400).json({ message: "donorId, recipientId, and donationId are required" });
     }
@@ -21,28 +21,42 @@ exports.sendRequest = async (req, res) => {
     const Donation = require("../donations/model");
     const HelpRequest = require("../requests/model");
 
-    // Fetch sender (recipient) name
+    // Fetch the requester (sender) name
     const sender = await User.findById(recipientId).select("name");
     const senderName = sender?.name || "Someone";
 
-    // Try donations first, then help requests
-    let postTitle = "a donation";
+    // Determine if this is Flow 1 (HelpRequest) or Flow 2 (Donation)
+    // and notify the correct person accordingly
+    const helpRequest = await HelpRequest.findById(donationId).select("title description");
     const donation = await Donation.findById(donationId).select("description type");
-    if (donation) {
+
+    let postTitle = "a request";
+    let notifyUserId = recipientId; // Default to recipient
+
+    if (helpRequest) {
+      // Flow 1: Fizza clicked Help Now on Ayesha's help request
+      // → notify recipientId (Ayesha, the request poster who needs help)
+      postTitle = helpRequest.title || helpRequest.description || "your request";
+      notifyUserId = recipientId;
+    } else if (donation) {
+      // Flow 2: Ayesha clicked Request This on Fizza's donation
+      // → notify donorId (Fizza, the donation poster who has something to give)
       postTitle = donation.description || donation.type || "a donation";
-    } else {
-      const helpReq = await HelpRequest.findById(donationId).select("title description");
-      if (helpReq) postTitle = helpReq.title || helpReq.description || "a request";
+      notifyUserId = donorId;
     }
 
-    // Always notify the DONOR (post owner) — they accept/reject
+    // Fetch the person who will receive the notification
+    const notifyUser = await User.findById(notifyUserId).select("name");
+    const notifyUserName = notifyUser?.name || "Someone";
+
+    // Create notification for the correct recipient
     await Notification.create({
-      receiverId: String(donorId),
+      receiverId: String(notifyUserId),
       senderId: String(recipientId),
       senderName: senderName,
       type: "chat_request",
-      title: `${senderName} wants your donation`,
-      message: `${senderName} wants "${postTitle}". Accept to start chatting.`,
+      title: `${senderName} wants your ${helpRequest ? "request" : "donation"}`,
+      message: `${senderName} wants ${helpRequest ? "to help with" : "to request"} "${postTitle}". Accept to start chatting.`,
       relatedRequestId: chatRequest._id,
       relatedDonationId: donationId,
     });

@@ -122,9 +122,13 @@ export default function RecipientProfile({ onNavigate }: Props) {
         >
           <Text style={styles.name}>{user?.name}</Text>
           {trustScore !== null && (
-            <Text style={styles.trustBadge}>
-              ⭐ Trust Score: {trustScore}/100
-            </Text>
+            <View style={[styles.trustBadgePill, {
+  backgroundColor: trustScore >= 70 ? "#16A34A" : trustScore >= 40 ? "#2563EB" : "#DC2626"
+}]}>
+  <Text style={styles.trustBadgeText}>
+    ⭐ {trustScore}/100
+  </Text>
+</View>
           )}
         </View>
 
@@ -224,5 +228,15 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: "center",
   },
+  trustBadgePill: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 20,
+},
+trustBadgeText: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "600",
+},
   logoutText: { color: "red", fontWeight: "600" },
 });
