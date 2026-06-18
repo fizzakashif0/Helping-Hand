@@ -1,66 +1,115 @@
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import {
-    ArrowRight,
-    Bell,
-    Calendar,
-    HandHeart,
-    Search,
-    Shield
+  ArrowRight,
+  Bell,
+  Calendar,
+  HandHeart,
+  Search,
+  Shield
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { DonationRecord, fetchAllDonations } from "../../store/donationStore";
+import { DEMO_REQUESTER_ID } from "../../lib/donations";
+import {
+  DonationRecord,
+  fetchAvailableDonationsDetached,
+  fetchBrowseDonationsDetached,
+} from "../../store/donationStore";
+import { fetchUnreadNotificationCount } from "../../store/notificationStore";
 import BottomNav, { NavItem } from "../Navbar";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000";
 
 interface RecipientHomeProps {
   onNavigate: (screen: string) => void;
 }
-
-const mockActiveEvents = [
-  { id: "1", name: "Winter Relief Drive 2024", ngo: "Hope Foundation", requests: 234, available: 266, image: "❄️" },
-  { id: "2", name: "Emergency Flood Relief", ngo: "Care Together", requests: 567, available: 433, image: "🌊" },
-];
 
 export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<NavItem>("home");
   const [nearbyDonations, setNearbyDonations] = useState<DonationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notifCount, setNotifCount] = useState(0);
+  const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  useEffect(() => {
-    loadNearbyDonations();
-  }, []);
-
-  const loadNearbyDonations = async () => {
+  const loadNearbyDonations = useCallback(async () => {
     setLoading(true);
     try {
-      // For now, fetch all donations (you can replace with actual geolocation later)
-      // const lat = 31.5497; // Example: Lahore coordinates
-      // const lng = 74.3436;
-      // const donations = await fetchNearbyDonations(lat, lng);
-      
-      const donations = await fetchAllDonations();
-      setNearbyDonations(donations);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const donations = await fetchAvailableDonationsDetached();
+        setNearbyDonations(donations);
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      const rows = await fetchBrowseDonationsDetached(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        50
+      );
+      setNearbyDonations(rows);
     } catch (error) {
       console.error("Failed to load nearby donations:", error);
+      try {
+        const donations = await fetchAvailableDonationsDetached();
+        setNearbyDonations(donations);
+      } catch {
+        setNearbyDonations([]);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/events/public`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveEvents(data.events ?? []);
+      }
+    } catch (_) {
+      // silently fail
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNearbyDonations();
+    loadEvents();
+  }, [loadNearbyDonations, loadEvents]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const n = await fetchUnreadNotificationCount(DEMO_REQUESTER_ID);
+        if (!cancelled) setNotifCount(n);
+      } catch {
+        if (!cancelled) setNotifCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -68,14 +117,16 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
               <Text style={styles.welcomeText}>Welcome</Text>
               <Text style={styles.subWelcomeText}>We're here to help</Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.bellButton}
-              onPress={() => router.push("/recipient-notifications")}
+              onPress={() => router.push("/notifications")}
             >
               <Bell size={24} color="white" />
-              <View style={styles.badgeCount}>
-                <Text style={styles.badgeText}>2</Text>
-              </View>
+              {notifCount > 0 ? (
+                <View style={styles.badgeCount}>
+                  <Text style={styles.badgeText}>{notifCount > 99 ? "99+" : notifCount}</Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           </View>
 
@@ -91,14 +142,14 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
 
         {/* Quick Actions */}
         <View style={styles.actionsGrid}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButtonWhite}
             onPress={() => router.push("/browse-donations")}
           >
             <Search size={24} color="#1A5F7A" />
             <Text style={styles.actionButtonTextBlue}>Browse Help</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButtonGhost}
             onPress={() => router.push("/create-help-request")}
           >
@@ -116,18 +167,39 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
           </TouchableOpacity>
         </View>
 
-        {mockActiveEvents.map((event) => (
-          <TouchableOpacity key={event.id} style={styles.card} onPress={() => onNavigate(`event-details-${event.id}`)}>
-            <View style={styles.cardContent}>
-              <View style={styles.emojiContainer}><Text style={styles.emojiText}>{event.image}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{event.name}</Text>
-                <Text style={styles.cardSubtitle}>{event.ngo}</Text>
-                <Text style={styles.cardStats}>{event.available} items available • {event.requests} requests</Text>
+        {loadingEvents ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading events...</Text>
+          </View>
+        ) : activeEvents.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No active NGO events right now</Text>
+            <Text style={styles.emptySubtext}>Check back soon!</Text>
+          </View>
+        ) : (
+          activeEvents.map((event) => (
+            <TouchableOpacity
+              key={event._id}
+              style={styles.card}
+              onPress={() => router.push(`/event-details/${event._id}` as any)}
+            >
+              <View style={styles.cardContent}>
+                <View style={styles.emojiContainer}>
+                  <Text style={styles.emojiText}>📅</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{event.name}</Text>
+                  <Text style={styles.cardSubtitle}>{event.ngoName}</Text>
+                  <Text style={styles.cardStats}>
+                    {event.participants} joined
+                    {event.location ? ` • ${event.location}` : ''}
+                    {event.startDate ? ` • ${event.startDate}` : ''}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))
+        )}
 
         {/* Nearby Donations */}
         <View style={[styles.sectionHeader, { marginTop: 24 }]}>
@@ -144,9 +216,15 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
           </View>
         ) : nearbyDonations.length > 0 ? (
           nearbyDonations.map((donation) => (
-            <TouchableOpacity key={donation.id} style={styles.card} onPress={() => onNavigate(`recipient-donation-details-${donation.id}`)}>
+            <TouchableOpacity
+              key={donation.id}
+              style={styles.card}
+              onPress={() => router.push(`/recipient-donation/${donation.id}`)}
+            >
               <View style={styles.badgeRow}>
-                <View style={styles.typeBadge}><Text style={styles.typeBadgeText}>{donation.type.toUpperCase()}</Text></View>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeBadgeText}>{donation.type.toUpperCase()}</Text>
+                </View>
                 <Text style={styles.locationText}>{donation.location}</Text>
               </View>
               <Text style={styles.cardTitle}>{donation.title}</Text>
@@ -164,21 +242,32 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
         )}
 
         {/* Status Dashboard */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.card, { marginTop: 24 }]}
           onPress={() => router.push("/my-requests")}
         >
           <View style={styles.statusHeader}>
-            <View style={styles.calendarIconBg}><Calendar size={24} color="white" /></View>
+            <View style={styles.calendarIconBg}>
+              <Calendar size={24} color="white" />
+            </View>
             <View>
               <Text style={styles.cardTitle}>Your Requests</Text>
               <Text style={styles.cardSubtitle}>Track your help requests</Text>
             </View>
           </View>
           <View style={styles.statsRow}>
-            <View style={styles.statBox}><Text style={styles.statNum}>2</Text><Text style={styles.statLabel}>Active</Text></View>
-            <View style={styles.statBox}><Text style={styles.statNum}>5</Text><Text style={styles.statLabel}>Fulfilled</Text></View>
-            <View style={styles.statBox}><Text style={styles.statNum}>1</Text><Text style={styles.statLabel}>Pending</Text></View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>2</Text>
+              <Text style={styles.statLabel}>Active</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>5</Text>
+              <Text style={styles.statLabel}>Fulfilled</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNum}>1</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -191,7 +280,7 @@ export const RecipientHome = ({ onNavigate }: RecipientHomeProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A5F7A', // Background gradient color
+    backgroundColor: '#1A5F7A',
   },
   scrollContent: {
     paddingBottom: 100,

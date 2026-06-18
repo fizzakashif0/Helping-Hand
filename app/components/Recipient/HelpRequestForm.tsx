@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
 import {
   Modal,
@@ -9,7 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getToken } from "../../lib/token";
 import { createRequest } from "../../store/requestStore";
+import LocationPicker, { SelectedPickupLocation } from "../common/LocationPicker";
 
 interface CreateHelpRequestFormProps {
   onSubmit: () => void;
@@ -21,12 +24,12 @@ export default function CreateHelpRequestForm({
   onBack,
 }: CreateHelpRequestFormProps) {
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<SelectedPickupLocation | null>(null);
   const [formData, setFormData] = useState({
     type: "",
     title: "",
     description: "",
     quantity: "",
-    location: "",
     urgency: "medium",
   });
   const [popup, setPopup] = useState<{
@@ -73,7 +76,6 @@ export default function CreateHelpRequestForm({
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
     const trimmedQuantity = formData.quantity.trim();
-    const trimmedLocation = formData.location.trim();
 
     if (!formData.type || !trimmedTitle || !trimmedDescription) {
       showPopup("Error", "Please fill in all required fields.");
@@ -81,14 +83,20 @@ export default function CreateHelpRequestForm({
     }
 
     setLoading(true);
+    const token = await getToken();
+if (!token) { showPopup("Error", "Please login first"); return; }
+const decoded: any = jwtDecode(token);
+const userId = decoded?.id || decoded?.sub;
+if (!userId) { showPopup("Error", "Could not get user ID"); return; }
     try {
       await createRequest({
         type: formData.type as any,
         title: trimmedTitle,
         description: trimmedDescription,
         quantity: trimmedQuantity,
-        location: trimmedLocation,
+        location,
         urgency: formData.urgency as "low" | "medium" | "high",
+        userId: userId,
       });
 
       showPopup("Success", "Help request submitted successfully.", onSubmit);
@@ -202,16 +210,8 @@ export default function CreateHelpRequestForm({
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Your Area</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={20} color="#888" />
-            <TextInput
-              style={[styles.input, styles.locationInput]}
-              placeholder="Enter your area or neighborhood"
-              value={formData.location}
-              onChangeText={(text) => setFormData({ ...formData, location: text })}
-            />
-          </View>
+          <Text style={styles.label}>Your Location</Text>
+          <LocationPicker onLocationSelect={setLocation} />
           <Text style={styles.helperText}>
             Only your general area will be shown to donors
           </Text>

@@ -1,16 +1,22 @@
 import {
-    Clock,
-    Heart,
-    MapPin,
-    MessageCircle,
-    Share2
+  Clock,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Share2
 } from "lucide-react-native";
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
+import { useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
+import { getToken } from "../../lib/token";
+import { buildApiUrl } from "../../lib/api";
+
 
 export type DonationType = "clothes" | "food" | "blood" | "financial";
 
@@ -41,6 +47,62 @@ const urgencyConfig = {
 };
 
 export function DonationPost({ post }: { post: DonationPostData }) {
+  const router = useRouter();
+  const handleContactRecipient = async () => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert("Error", "Missing auth token");
+        return;
+      }
+
+      const decoded: any = jwtDecode(token);
+      const senderId = decoded?.sub || decoded?.id;
+      if (!senderId) {
+        Alert.alert("Error", "Unable to determine current user");
+        return;
+      }
+
+      const donationId = post.id;
+
+      // Determine the other person's id (the person being contacted)
+      const recipientId =
+        (post as any)?.donorId ||
+        (post as any)?.author ||
+        (post as any)?.authorId ||
+        (post as any)?.userId ||
+        (post as any)?._id ||
+        null;
+
+      if (!recipientId) {
+        Alert.alert("Error", "Unable to determine recipient");
+        return;
+      }
+
+      const response = await fetch(buildApiUrl("/api/chat-requests"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          donorId: senderId,
+          recipientId,
+          donationId,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to send request");
+      }
+
+      router.push("/chat-list");
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to send request");
+    }
+  };
+
   return (
     <View style={styles.card}>
       {/* Header */}
@@ -108,6 +170,10 @@ export function DonationPost({ post }: { post: DonationPostData }) {
 
         <TouchableOpacity style={styles.donateButton}>
           <Text style={styles.donateText}>Donate</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.contactButton} onPress={handleContactRecipient}>
+          <Text style={styles.contactText}>Contact Recipient</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -207,6 +273,19 @@ const styles = StyleSheet.create({
   },
 
   donateText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600"
+  },
+
+  contactButton: {
+    backgroundColor: "#0F766E",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8
+  },
+
+  contactText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600"

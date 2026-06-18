@@ -1,51 +1,138 @@
+import { useRouter } from "expo-router";
 import {
-    Bell,
-    ChevronRight,
-    HelpCircle,
-    Info,
-    LogOut,
-    Settings,
-    Shield,
-    User,
+  Bell,
+  ChevronRight,
+  HelpCircle,
+  Info,
+  LogOut,
+  Settings,
+  Shield,
+  User,
 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { apiFetch } from "../../lib/apiClient";
+import { clearToken } from "../../lib/token";
 
 interface Props {
   onNavigate: (screen: string) => void;
-  onLogout: () => void;
 }
 
-export default function RecipientProfile({ onNavigate, onLogout }: Props) {
+export default function RecipientProfile({ onNavigate }: Props) {
+  const router = useRouter();
+  const [user, setUser] = useState<
+    { _id?: string; id?: string; name: string; email: string } | null
+  >(null);
+  const [trustScore, setTrustScore] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await apiFetch("/api/users/profile");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        setUser(data.user);
+
+        const uid = data?.user?._id || data?.user?.id;
+        if (uid) {
+          try {
+            const trustRes = await apiFetch(`/api/users/${uid}/trust-score`);
+            if (!trustRes.ok) throw new Error("Failed to fetch trust score");
+            const trustData = await trustRes.json();
+            const score =
+              typeof trustData?.score === "number" ? trustData.score : 0;
+            setTrustScore(score);
+          } catch {
+            // silently skip on trust score failure
+          }
+        }
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await clearToken();
+    router.push("/login");
+  };
+
   const menu = [
     { label: "Edit Profile", icon: User, screen: "edit-profile" },
-    { label: "Account Settings", icon: Settings, screen: "account-settings" },
+    {
+      label: "Account Settings",
+      icon: Settings,
+      screen: "account-settings",
+    },
     { label: "Notifications", icon: Bell, screen: "notifications" },
     { label: "Privacy & Security", icon: Shield, screen: "privacy" },
     { label: "Help & Support", icon: HelpCircle, screen: "help" },
     { label: "About", icon: Info, screen: "about" },
   ];
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#1A5F7A" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: "red" }}>Failed to load profile</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         <Text style={styles.headerSub}>Manage your account</Text>
       </View>
 
-      {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
           <User color="white" size={40} />
         </View>
-        <Text style={styles.name}>Recipient User</Text>
-        <Text style={styles.email}>recipient@example.com</Text>
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={styles.name}>{user?.name}</Text>
+          {trustScore !== null && (
+            <View style={[styles.trustBadgePill, {
+  backgroundColor: trustScore >= 70 ? "#16A34A" : trustScore >= 40 ? "#2563EB" : "#DC2626"
+}]}>
+  <Text style={styles.trustBadgeText}>
+    ⭐ {trustScore}/100
+  </Text>
+</View>
+          )}
+        </View>
+
+        <Text style={styles.email}>{user?.email}</Text>
 
         <TouchableOpacity
           style={styles.editBtn}
@@ -55,7 +142,6 @@ export default function RecipientProfile({ onNavigate, onLogout }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Menu */}
       <View style={styles.menu}>
         {menu.map((item, index) => (
           <TouchableOpacity
@@ -70,8 +156,7 @@ export default function RecipientProfile({ onNavigate, onLogout }: Props) {
         ))}
       </View>
 
-      {/* Logout */}
-      <TouchableOpacity style={styles.logout} onPress={onLogout}>
+      <TouchableOpacity style={styles.logout} onPress={handleLogout}>
         <LogOut color="red" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
@@ -107,7 +192,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   name: { fontSize: 18, fontWeight: "600" },
-  email: { color: "gray", marginBottom: 12 },
+  trustBadge: { fontSize: 12, color: "#1D4ED8", fontWeight: "600" },
+  email: { color: "gray", marginBottom: 12, textAlign: "center" },
 
   editBtn: {
     backgroundColor: "#1A5F7A",
@@ -140,6 +226,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 10,
+    alignItems: "center",
   },
+  trustBadgePill: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 20,
+},
+trustBadgeText: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "600",
+},
   logoutText: { color: "red", fontWeight: "600" },
 });

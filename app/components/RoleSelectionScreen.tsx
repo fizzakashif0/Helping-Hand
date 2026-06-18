@@ -1,38 +1,75 @@
 import { LinearGradient } from "expo-linear-gradient";
-import {
-    HandHeart,
-    Heart
-} from "lucide-react-native";
+import { HandHeart, Heart } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, {
-    FadeIn,
-    FadeInLeft,
-    ZoomIn,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withTiming
-} from "react-native-reanimated";
-
+import {
+  Animated,
+  Easing,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 interface RoleSelectionProps {
   onRoleSelect: (role: "donor" | "recipient") => void;
 }
-
 export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
-  const pulse = useSharedValue(1);
-
-  pulse.value = withRepeat(
-    withTiming(1.2, { duration: 4000 }),
-    -1,
-    true
-  );
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: 0.3
-  }));
-
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const logoAnim = React.useRef(new Animated.Value(0)).current;
+  const titleAnim = React.useRef(new Animated.Value(0)).current;
+  const subtitleAnim = React.useRef(new Animated.Value(0)).current;
+  const card1Anim = React.useRef(new Animated.Value(0)).current;
+  const card2Anim = React.useRef(new Animated.Value(0)).current;
+  const backAnim = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    Animated.sequence([
+      Animated.timing(logoAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(subtitleAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(card1Anim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(card2Anim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [backAnim, card1Anim, card2Anim, logoAnim, pulseAnim, subtitleAnim, titleAnim]);
   return (
     <LinearGradient
       colors={["#1A5F7A", "#0E4A61", "#082F3E"]}
@@ -40,34 +77,60 @@ export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
     >
       {/* Animated background circle */}
       <Animated.View
-        style={[styles.bgCircle, pulseStyle]}
+        style={[
+          styles.bgCircle,
+          {
+            transform: [{ scale: pulseAnim }],
+            opacity: 0.3,
+          },
+        ]}
       />
-
       {/* Logo */}
-      <Animated.View entering={ZoomIn.duration(500)} style={styles.logoWrap}>
+      <Animated.View
+        style={[
+          styles.logoWrap,
+          {
+            opacity: logoAnim,
+            transform: [
+              {
+                scale: logoAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         <View style={styles.logo}>
           <HandHeart size={64} color="#fff" />
         </View>
       </Animated.View>
-
       {/* Title */}
-      <Animated.Text
-        entering={FadeIn.delay(200)}
-        style={styles.title}
-      >
+      <Animated.Text style={[styles.title, { opacity: titleAnim }]}>
         Choose Your Role
       </Animated.Text>
-
-      <Animated.Text
-        entering={FadeIn.delay(300)}
-        style={styles.subtitle}
-      >
+      <Animated.Text style={[styles.subtitle, { opacity: subtitleAnim }]}>
         Select how you'd like to make a difference
       </Animated.Text>
-
       {/* Cards */}
       <View style={styles.cards}>
-        <Animated.View entering={FadeInLeft.delay(400)}>
+        <Animated.View
+          style={[
+            styles.cardAnimWrap,
+            {
+              opacity: card1Anim,
+              transform: [
+                {
+                  translateX: card1Anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <RoleCard
             icon={<Heart size={32} color="#fff" />}
             title="I want to Donate"
@@ -75,8 +138,22 @@ export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             onPress={() => onRoleSelect("donor")}
           />
         </Animated.View>
-
-        <Animated.View entering={FadeInLeft.delay(500)}>
+        <Animated.View
+          style={[
+            styles.cardAnimWrap,
+            {
+              opacity: card2Anim,
+              transform: [
+                {
+                  translateX: card2Anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <RoleCard
             icon={<HandHeart size={32} color="#fff" />}
             title="I need Help"
@@ -84,26 +161,19 @@ export function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             onPress={() => onRoleSelect("recipient")}
           />
         </Animated.View>
-
-        {/* NGO option removed as requested */}
       </View>
-
       {/* Back */}
-      <Animated.Text
-        entering={FadeIn.delay(800)}
-        style={styles.back}
-      >
+      <Animated.Text style={[styles.back, { opacity: backAnim }]}>
         Back
       </Animated.Text>
     </LinearGradient>
   );
 }
-
 function RoleCard({
   icon,
   title,
   subtitle,
-  onPress
+  onPress,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -120,15 +190,13 @@ function RoleCard({
     </TouchableOpacity>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24
+    paddingHorizontal: 24,
   },
-
   bgCircle: {
     position: "absolute",
     top: 80,
@@ -136,41 +204,38 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: "rgba(255,255,255,0.08)"
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-
   logoWrap: {
-    marginBottom: 32
+    marginBottom: 32,
   },
-
   logo: {
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 24,
     borderRadius: 100,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)"
+    borderColor: "rgba(255,255,255,0.3)",
   },
-
   title: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "600",
     marginBottom: 6,
-    textAlign: "center"
+    textAlign: "center",
   },
-
   subtitle: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     textAlign: "center",
-    marginBottom: 40
+    marginBottom: 40,
   },
-
   cards: {
     width: "100%",
-    gap: 16
+    gap: 16,
   },
-
+  cardAnimWrap: {
+    width: "100%",
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -179,30 +244,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
-    padding: 20
+    padding: 20,
   },
-
   iconBox: {
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 16,
-    borderRadius: 14
+    borderRadius: 14,
   },
-
   cardTitle: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 2
+    marginBottom: 2,
   },
-
   cardSubtitle: {
     color: "rgba(255,255,255,0.7)",
-    fontSize: 13
+    fontSize: 13,
   },
-
   back: {
     marginTop: 32,
     color: "rgba(255,255,255,0.7)",
-    fontSize: 14
-  }
+    fontSize: 14,
+  },
 });

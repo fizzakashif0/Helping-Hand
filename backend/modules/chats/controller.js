@@ -1,0 +1,264 @@
+const ChatThread = require("./chatThreadModel");
+const User = require("../users/model");
+const Message = require("../messages/model");
+
+/**
+ * Create a new chat thread between donor and recipient for a donation
+ * Check no thread already exists for this donationId
+ */
+exports.createThread = async (req, res) => {
+  try {
+    const { donorId, recipientId, donationId } = req.body;
+
+    if (!donorId || !recipientId || !donationId) {
+      return res.status(400).json({
+        message: "donorId, recipientId, and donationId are required",
+      });
+    }
+
+    // Check if thread already exists for this donation
+    const existingThread = await ChatThread.findOne({ donationId });
+    if (existingThread) {
+      return res.status(409).json({
+        message: "Thread already exists for this donation",
+        threadId: existingThread._id,
+      });
+    }
+
+    // Create new thread
+    const thread = await ChatThread.create({
+      donorId,
+      recipientId,
+      donationId,
+      status: "active",
+    });
+
+    return res.status(201).json(thread);
+  } catch (error) {
+    console.error("Create thread error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Internal helper to create/find a thread from plain IDs.
+ * Keeps createThread route behavior unchanged while enabling reuse.
+ * Always saves with donorId = helper/giver, recipientId = needer/requester
+ */
+exports.createThreadFromIds = async ({ donorId, recipientId, donationId }) => {
+  const existingThread = await ChatThread.findOne({ donationId });
+  if (existingThread) {
+    return existingThread;
+  }
+
+  const thread = await ChatThread.create({
+    donorId,
+    recipientId,
+    donationId,
+    status: "active",
+  });
+
+  return thread;
+};
+/**
+ * Get all threads for a user (where user is donor OR recipient)
+ * Populate donor and recipient info, sort by latest message
+ */
+exports.getThreadsByUser = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.sub || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const threads = await ChatThread.find({
+      $or: [{ donorId: userId }, { recipientId: userId }],
+    })
+      .populate("donorId", "name profilePicture")
+      .populate("recipientId", "name profilePicture")
+      .populate("donationId", "_id type description")
+      .sort({ updatedAt: -1 });
+
+    // For each thread fetch last message + unread count
+    const enriched = await Promise.all(threads.map(async (thread) => {
+      const lastMsg = await Message.findOne({ threadId: thread._id })
+        .sort({ createdAt: -1 })
+        .select("text createdAt senderId");
+
+      const unreadCount = await Message.countDocuments({
+        threadId: thread._id,
+        senderId: { $ne: userId },
+        readAt: null,
+      });
+
+      return {
+        ...thread.toObject(),
+        lastMessage: lastMsg?.text || "No messages yet",
+        lastMessageTime: lastMsg?.createdAt || thread.updatedAt,
+        unreadCount,
+      };
+    }));
+
+    return res.status(200).json(enriched);
+  } catch (error) {
+    console.error("Get threads error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Get a specific thread by ID
+ * Only return if user is donor or recipient of this thread
+ */
+exports.getThreadById = async (req, res) => {
+  try {
+    const { id } = req.params;
+   const userId = req.user?.id || req.user?.sub || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const thread = await ChatThread.findById(id)
+      .populate("donorId", "name profilePicture")
+      .populate("recipientId", "name profilePicture")
+      .populate("donationId", "_id type description");
+
+    if (!thread) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    // Verify user belongs to this thread
+    const isDonor = thread.donorId._id.toString() === userId;
+    const isRecipient = thread.recipientId._id.toString() === userId;
+
+    if (!isDonor && !isRecipient) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    return res.status(200).json(thread);
+  } catch (error) {
+    console.error("Get thread error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Lock a chat thread (set status to 'locked', update lockedAt)
+ */
+exports.lockThread = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?.sub || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const thread = await ChatThread.findById(id);
+
+    if (!thread) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+
+    // Verify user belongs to this thread
+    const isDonor = thread.donorId.toString() === userId;
+    const isRecipient = thread.recipientId.toString() === userId;
+
+    if (!isDonor && !isRecipient) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Lock the thread
+    thread.status = "locked";
+    thread.lockedAt = new Date();
+    await thread.save();
+
+    return res.status(200).json(thread);
+  } catch (error) {
+    console.error("Lock thread error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+/**
+ * Mark thread as complete by one user.
+ * When both users mark complete → thread locks + feedback triggered via socket.
+ */
+exports.markComplete = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?.sub || req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const thread = await ChatThread.findById(id)
+      .populate("donorId", "name")
+      .populate("recipientId", "name");
+
+    if (!thread) return res.status(404).json({ message: "Thread not found" });
+
+    const isDonor = thread.donorId._id.toString() === userId;
+    const isRecipient = thread.recipientId._id.toString() === userId;
+    if (!isDonor && !isRecipient) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Already marked by this user?
+    const alreadyMarked = thread.completedBy?.some(
+      (id) => id.toString() === userId
+    );
+    if (alreadyMarked) {
+      return res.status(409).json({ message: "Already marked as complete" });
+    }
+
+    // Add user to completedBy
+    thread.completedBy = [...(thread.completedBy || []), userId];
+
+    const otherUserId = isDonor
+      ? thread.recipientId._id.toString()
+      : thread.donorId._id.toString();
+
+    const userName = isDonor
+      ? thread.donorId.name
+      : thread.recipientId.name;
+
+    const Notification = require("../notifications/model");
+    const bothCompleted = thread.completedBy.length >= 2;
+
+    if (bothCompleted) {
+      // Lock the thread
+      thread.status = "locked";
+      thread.lockedAt = new Date();
+      await thread.save();
+
+      // Notify both via socket (handled in route via io)
+      return res.status(200).json({
+        status: "locked",
+        bothCompleted: true,
+        donorId: thread.donorId._id,
+        recipientId: thread.recipientId._id,
+        donationId: thread.donationId,
+      });
+    } else {
+      await thread.save();
+
+      // Notify the other user
+      await Notification.create({
+        receiverId: otherUserId,
+        senderId: userId,
+        type: "completion_requested",
+        title: "Donation Marked Complete",
+        message: `${userName} has marked this donation as complete. Mark it complete too to close the chat.`,
+        relatedDonationId: thread.donationId,
+      });
+
+      return res.status(200).json({
+        status: "pending",
+        bothCompleted: false,
+      });
+    }
+  } catch (error) {
+    console.error("Mark complete error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

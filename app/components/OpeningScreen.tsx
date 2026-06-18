@@ -37,8 +37,6 @@ export default function OpeningPage() {
 
   const pulseStyle = { transform: [{ scale: pulseAnim }] } as any;
 
-  const logoSource = require("../assets/images/icon.png");
-
   return (
     <LinearGradient
       colors={["#1A5F7A", "#0E4A61", "#082F3E"]}

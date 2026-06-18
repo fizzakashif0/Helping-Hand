@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { jwtDecode } from "jwt-decode";
 import { useState } from "react";
 import {
   Modal,
@@ -11,21 +12,19 @@ import {
 } from "react-native";
 import { buildApiUrl, getApiBaseUrl } from "../../lib/api";
 import {
-  DEMO_DONOR_ID,
   DonationType,
-  toBackendDonationType,
+  toBackendDonationType
 } from "../../lib/donations";
+import { getToken } from "../../lib/token";
 import { addDonation } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
-import LocationPicker from "../common/LocationPicker";
-
-
+import LocationPicker, { SelectedPickupLocation } from "../common/LocationPicker";
 interface CreateDonationFormProps {
   onSubmit: () => void;
   onBack: () => void;
 }
 
-export function CreateDonationForm({
+export default function CreateDonationForm({
   onSubmit,
   onBack,
 }: CreateDonationFormProps) {
@@ -39,7 +38,7 @@ export function CreateDonationForm({
     urgency: "medium",
   });
   const [navTab, setNavTab] = useState<NavItem>("create");
-  const [location, setLocation] = useState<any>(null);
+  const [location, setLocation] = useState<SelectedPickupLocation | null>(null);
   const [popup, setPopup] = useState<{
     visible: boolean;
     title: string;
@@ -68,6 +67,17 @@ export function CreateDonationForm({
     }
   };
 
+  const handleLocationSelect = (loc: SelectedPickupLocation | null) => {
+    setLocation(loc);
+    if (loc) {
+      // Auto-fill the address field with the full address
+      setFormData({
+        ...formData,
+        location: loc.fullAddress || loc.landmark,
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     const trimmedTitle = formData.title.trim();
     const trimmedDescription = formData.description.trim();
@@ -80,6 +90,11 @@ export function CreateDonationForm({
     }
 
     setLoading(true);
+    const token = await getToken();
+if (!token) { showPopup("Error", "Please login first"); return; }
+const decoded: any = jwtDecode(token);
+const userId = decoded?.id || decoded?.sub;
+if (!userId) { showPopup("Error", "Could not get user ID"); return; }
     try {
       const apiBaseUrl = getApiBaseUrl();
       if (!apiBaseUrl) {
@@ -90,7 +105,7 @@ export function CreateDonationForm({
 
       // Create donation object for backend
       const donationData: any = {
-        userId: DEMO_DONOR_ID,
+        userId: userId,
         type: toBackendDonationType(formData.type as DonationType),
         description: `${trimmedTitle}\n${trimmedDescription}`,
         quantityText: trimmedQuantity || "Not specified",
@@ -99,25 +114,33 @@ export function CreateDonationForm({
       // Add location if available (matches backend location model)
       if (location?.latitude !== undefined && location?.longitude !== undefined) {
         donationData.location = {
-          address: location.address || trimmedLocation || "Not specified",
+          landmark: location.landmark,
+          areaName: location.areaName,
+          fullAddress: location.fullAddress || trimmedLocation || location.landmark,
+          address: location.fullAddress || trimmedLocation || location.landmark,
           coordinates: {
             lat: location.latitude,
-            lng: location.longitude
-          }
+            lng: location.longitude,
+          },
         };
       } else if (trimmedLocation) {
         donationData.location = {
-          address: trimmedLocation
+          landmark: trimmedLocation,
+          areaName: trimmedLocation,
+          fullAddress: trimmedLocation,
+          address: trimmedLocation,
         };
       }
-
+console.log("Token being sent:", token);
+console.log("Auth header:", `Bearer ${token}`);
       console.log("Sending donation data:", donationData); // Debug log
 
       // Submit to backend
       const response = await fetch(buildApiUrl("/api/donations"), {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(donationData)
       });
@@ -141,8 +164,8 @@ export function CreateDonationForm({
         recipientName: "Nearby Recipients",
         amount: trimmedQuantity,
         date: new Date().toLocaleDateString(),
-        location: trimmedLocation || "Not specified",
-        status: "pending"
+        location: location?.landmark || trimmedLocation || "Not specified",
+        status: "pending",
       });
 
       showPopup(
@@ -179,11 +202,21 @@ export function CreateDonationForm({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{popup.title}</Text>
-            <Text style={styles.modalMessage}>{popup.message}</Text>
-            <TouchableOpacity style={styles.modalButton} onPress={closePopup}>
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
+            {[
+              <Text key="title" style={styles.modalTitle}>
+                {popup.title}
+              </Text>,
+              <Text key="msg" style={styles.modalMessage}>
+                {popup.message}
+              </Text>,
+              <TouchableOpacity
+                key="ok"
+                style={styles.modalButton}
+                onPress={closePopup}
+              >
+                <Text style={styles.modalButtonText}>OK</Text>
+              </TouchableOpacity>,
+            ]}
           </View>
         </View>
       </Modal>
@@ -191,16 +224,17 @@ export function CreateDonationForm({
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-
-          <View style={{ marginLeft: 12 }}>
-            <Text style={styles.headerTitle}>Create Donation</Text>
-            <Text style={styles.headerSubtitle}>
-              Share what you can offer to help others
-            </Text>
-          </View>
+          {[
+            <TouchableOpacity key="back" onPress={onBack}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>,
+            <View key="titles" style={{ marginLeft: 12 }}>
+              <Text style={styles.headerTitle}>Create Donation</Text>
+              <Text style={styles.headerSubtitle}>
+                Share what you can offer to help others
+              </Text>
+            </View>,
+          ]}
         </View>
 
         {/* Donation Type */}
@@ -219,8 +253,14 @@ export function CreateDonationForm({
                   setFormData({ ...formData, type: type.value })
                 }
               >
-                <Text style={styles.typeIcon}>{type.icon}</Text>
-                <Text style={styles.typeText}>{type.label}</Text>
+                {[
+                  <Text key="icon" style={styles.typeIcon}>
+                    {type.icon}
+                  </Text>,
+                  <Text key="label" style={styles.typeText}>
+                    {type.label}
+                  </Text>,
+                ]}
               </TouchableOpacity>
             ))}
           </View>
@@ -257,15 +297,18 @@ export function CreateDonationForm({
         <View style={styles.card}>
           <Text style={styles.label}>Quantity / Amount</Text>
           <View style={styles.inputRow}>
-            <Ionicons name="cube-outline" size={20} color="#999" />
-            <TextInput
-              style={styles.inputFlex}
-              placeholder="e.g., 5 bags, Rs 10,000"
-              value={formData.quantity}
-              onChangeText={(text) =>
-                setFormData({ ...formData, quantity: text })
-              }
-            />
+            {[
+              <Ionicons key="icon" name="cube-outline" size={20} color="#999" />,
+              <TextInput
+                key="input"
+                style={styles.inputFlex}
+                placeholder="e.g., 5 bags, Rs 10,000"
+                value={formData.quantity}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, quantity: text })
+                }
+              />,
+            ]}
           </View>
         </View>
 
@@ -273,15 +316,18 @@ export function CreateDonationForm({
         <View style={styles.card}>
           <Text style={styles.label}>Pickup Location</Text>
           <View style={styles.inputRow}>
-            <Ionicons name="location-outline" size={20} color="#999" />
-            <TextInput
-              style={styles.inputFlex}
-              placeholder="Enter address or area"
-              value={formData.location}
-              onChangeText={(text) =>
-                setFormData({ ...formData, location: text })
-              }
-            />
+            {[
+              <Ionicons key="icon" name="location-outline" size={20} color="#999" />,
+              <TextInput
+                key="input"
+                style={styles.inputFlex}
+                placeholder="Enter address or area"
+                value={formData.location}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, location: text })
+                }
+              />,
+            ]}
           </View>
           <Text style={styles.helperText}>
             Your exact address will only be shared with confirmed recipients
@@ -289,11 +335,11 @@ export function CreateDonationForm({
           
           {/* Location Picker */}
           <View style={{ marginTop: 12 }}>
-            <LocationPicker onLocationSelect={setLocation} />
+            <LocationPicker onLocationSelect={handleLocationSelect} />
           </View>
           {location && (
             <Text style={styles.helperText}>
-              ✓ Location selected: {location.latitude?.toFixed(2)}, {location.longitude?.toFixed(2)}
+              ✓ Pickup area for listing: {location.landmark}
             </Text>
           )}
         </View>
@@ -333,14 +379,7 @@ export function CreateDonationForm({
           </View>
         </View>
 
-        {/* Upload */}
-        <View style={styles.card}>
-          <Text style={styles.label}>Add Photos (Optional)</Text>
-          <TouchableOpacity style={styles.uploadBox}>
-            <Ionicons name="cloud-upload-outline" size={32} color="#999" />
-            <Text style={styles.uploadText}>Tap to upload photos</Text>
-          </TouchableOpacity>
-        </View>
+      
 
         {/* Submit */}
         <TouchableOpacity
@@ -552,5 +591,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateDonationForm;
 

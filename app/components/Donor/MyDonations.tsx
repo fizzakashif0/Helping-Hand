@@ -15,6 +15,12 @@ import {
 } from "react-native";
 
 import { DEMO_DONOR_ID } from "../../lib/donations";
+import {
+  DonationRequestRecord,
+  fetchIncomingDonationRequests,
+  subscribeIncomingDonationRequests,
+  updateDonationRequestStatusApi,
+} from "../../store/donationRequestStore";
 import { DonationRecord, fetchUserDonations, getDonations, subscribe } from "../../store/donationStore";
 import BottomNav, { NavItem } from "../Navbar";
 
@@ -90,18 +96,24 @@ function DonationHistoryItem({ donation }: { donation: DonationRecord }) {
 }
 
 export default function MyDonations() {
-  const [filterTab, setFilterTab] = useState<"all" | "completed" | "pending">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "completed" | "pending" | "incoming">("all");
   const [navTab, setNavTab] = useState<NavItem>("donations");
   const [donationHistory, setDonationHistory] = useState<DonationRecord[]>(() => getDonations());
+  const [incoming, setIncoming] = useState<DonationRequestRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [incomingLoading, setIncomingLoading] = useState(false);
 
   useEffect(() => {
-    // Load donations from backend
     loadDonations();
-    
-    // Subscribe to local store changes
+
     const unsubscribe = subscribe(setDonationHistory);
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeIncomingDonationRequests(setIncoming);
+    loadIncoming();
+    return unsub;
   }, []);
 
   const loadDonations = async () => {
@@ -115,6 +127,17 @@ export default function MyDonations() {
     }
   };
 
+  const loadIncoming = async () => {
+    setIncomingLoading(true);
+    try {
+      await fetchIncomingDonationRequests(DEMO_DONOR_ID);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIncomingLoading(false);
+    }
+  };
+
   const completed = donationHistory.filter(d => d.status === "completed");
   const pending = donationHistory.filter(
     d => d.status === "pending" || d.status === "in-progress"
@@ -125,7 +148,9 @@ export default function MyDonations() {
       ? donationHistory
       : filterTab === "completed"
       ? completed
-      : pending;
+      : filterTab === "pending"
+      ? pending
+      : [];
 
   return (
     <View style={styles.container}>
@@ -167,20 +192,70 @@ export default function MyDonations() {
           active={filterTab === "pending"}
           onPress={() => setFilterTab("pending")}
         />
+        <TabButton
+          label={`Requests (${incoming.filter((i) => i.status === "pending").length})`}
+          active={filterTab === "incoming"}
+          onPress={() => setFilterTab("incoming")}
+        />
       </View>
 
       {/* List */}
       <ScrollView contentContainerStyle={styles.list}>
-        {loading ? (
+        {filterTab === "incoming" ? (
+          incomingLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading requests...</Text>
+            </View>
+          ) : incoming.length > 0 ? (
+            incoming.map((req) => (
+              <View key={req.id} style={styles.card}>
+                <Text style={styles.title}>{req.title}</Text>
+                <Text style={styles.subText}>
+                  From: {req.recipientName || "Recipient"}
+                </Text>
+                <Text style={styles.subText}>Status: {req.status}</Text>
+                {req.status === "pending" ? (
+                  <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                    <TouchableOpacity
+                      style={styles.chatBtn}
+                      onPress={async () => {
+                        await updateDonationRequestStatusApi({
+                          donorId: DEMO_DONOR_ID,
+                          requestId: req.id,
+                          status: "accepted",
+                        });
+                        loadIncoming();
+                      }}
+                    >
+                      <Text style={styles.chatText}>Accept</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={async () => {
+                        await updateDonationRequestStatusApi({
+                          donorId: DEMO_DONOR_ID,
+                          requestId: req.id,
+                          status: "rejected",
+                        });
+                        loadIncoming();
+                      }}
+                    >
+                      <Text>Reject</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No incoming donation requests</Text>
+          )
+        ) : loading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading your donations...</Text>
           </View>
         ) : data.length > 0 ? (
-          data.map(donation => (
-            <DonationHistoryItem
-              key={donation.id}
-              donation={donation}
-            />
+          data.map((donation) => (
+            <DonationHistoryItem key={donation.id} donation={donation} />
           ))
         ) : (
           <Text style={styles.emptyText}>No donations found</Text>
@@ -377,5 +452,21 @@ const styles = StyleSheet.create({
   loadingText: {
     color: "#6B7280",
     fontSize: 14
-  }
+  },
+  chatBtn: {
+    backgroundColor: "#16A34A",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  chatText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  editBtn: {
+    backgroundColor: "#eee",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
 }); 
